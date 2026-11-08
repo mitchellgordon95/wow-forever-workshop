@@ -1,0 +1,9 @@
+## Interface: 11507
+## Title: Forever Workshop
+## Notes: Exports profession skills, bag/bank stock and Auctionator prices for the Forever Workshop planner page. /fw export
+## Author: Mitchell Gordon
+## Version: 0.1.0
+## SavedVariables: ForeverWorkshopDB
+## OptionalDeps: Auctionator
+
+Core.lua

@@ -1,0 +1,862 @@
+<title>Forever Workshop</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a single tabbed workbench. Left-to-right the pipeline runs gatherer -> smith/engineer -> tailor/enchanter; every view is scanned, not read, so state lives in color chips and short rows. */
+:root{
+  --bg:#e8e5de; --surface:#f4f2ec; --surface-2:#dcd8ce; --line:#c9c3b5; --fg:#26221d; --muted:#6b6457;
+  --accent:#8a5a14; --accent-fg:#fff;
+  --p-mining:#b4612a; --p-skinning:#8d6b3b; --p-bs:#4f6577; --p-eng:#5f7a2e; --p-tailor:#6d4f9c; --p-ench:#9a3f7a;
+  --d-orange:#d9631e; --d-yellow:#b58a00; --d-green:#3a8f3a; --d-grey:#8a877f;
+  --good:#2f7d4f; --warn:#b06a00; --bad:#a83232;
+  --font-display:"Cinzel",Georgia,serif; --font-body:"Alegreya Sans","Gill Sans",system-ui,sans-serif; --font-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#15181c; --surface:#1e2228; --surface-2:#282d35; --line:#3a4049; --fg:#e4dfd4; --muted:#9a948a;
+  --accent:#d9a648; --accent-fg:#1a1200;
+  --p-mining:#e2834a; --p-skinning:#c59a5e; --p-bs:#8fa6b8; --p-eng:#9ac25a; --p-tailor:#b08fe0; --p-ench:#e07ab8;
+  --d-orange:#ff8040; --d-yellow:#ffd100; --d-green:#5fd35f; --d-grey:#8f8f8f;
+  --good:#5fc884; --warn:#f0a84a; --bad:#ef6b6b; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#15181c; --surface:#1e2228; --surface-2:#282d35; --line:#3a4049; --fg:#e4dfd4; --muted:#9a948a;
+  --accent:#d9a648; --accent-fg:#1a1200;
+  --p-mining:#e2834a; --p-skinning:#c59a5e; --p-bs:#8fa6b8; --p-eng:#9ac25a; --p-tailor:#b08fe0; --p-ench:#e07ab8;
+  --d-orange:#ff8040; --d-yellow:#ffd100; --d-green:#5fd35f; --d-grey:#8f8f8f;
+  --good:#5fc884; --warn:#f0a84a; --bad:#ef6b6b; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.45;margin:0;
+  padding-block:0 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--font-display);font-weight:700;text-wrap:balance;margin:0}
+h1{font-size:1.5rem;letter-spacing:.02em}
+h2{font-size:1.15rem;margin-bottom:.5rem}
+h3{font-size:.95rem;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+p{margin:0 0 .6rem;max-width:68ch}
+a{color:var(--accent)}
+.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:.9em}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:.5rem 1.25rem;padding-block:1.1rem .6rem;border-bottom:1px solid var(--line)}
+header .tag{font-size:.8rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+header .sync{margin-left:auto;font-size:.8rem;color:var(--muted)}
+nav{display:flex;flex-wrap:wrap;gap:.25rem;padding-block:.75rem;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+nav a{padding:.4rem .8rem;border-radius:4px;text-decoration:none;color:var(--fg);font-weight:500;border:1px solid transparent}
+nav a:hover{border-color:var(--line)}
+nav a.active{background:var(--surface);border-color:var(--line);color:var(--accent)}
+section.view{display:none;padding-block:.5rem 1rem}
+section.view.active{display:block}
+.row{display:flex;flex-wrap:wrap;gap:1rem}
+.row>*{min-width:0}
+.col{flex:1 1 320px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:.9rem 1rem}
+.card.flat{background:transparent}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{text-align:left;padding:.35rem .5rem;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+td.r,th.r{text-align:right}
+.tablewrap{overflow-x:auto}
+input[type=number],input[type=text],select,textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:.3rem .45rem}
+input[type=number]{width:5.5rem;font-family:var(--font-mono);font-size:.9rem;text-align:right}
+input.price{width:5rem}
+input:focus,select:focus,button:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+button{font:inherit;color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:.35rem .75rem;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent;font-weight:600}
+button.ghost{background:transparent}
+button:disabled{opacity:.5;cursor:default}
+label.inline{display:inline-flex;align-items:center;gap:.4rem;margin-right:.75rem}
+.chip{display:inline-block;padding:.05rem .5rem;border-radius:999px;font-size:.75rem;font-weight:600;letter-spacing:.03em;border:1px solid currentColor;line-height:1.4}
+.d-orange{color:var(--d-orange)} .d-yellow{color:var(--d-yellow)} .d-green{color:var(--d-green)} .d-grey{color:var(--d-grey)}
+.d-locked{color:var(--muted);opacity:.7}
+.good{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+.prof{font-weight:600}
+.prof-mining{color:var(--p-mining)} .prof-skinning{color:var(--p-skinning)} .prof-blacksmithing{color:var(--p-bs)} .prof-engineering{color:var(--p-eng)} .prof-tailoring{color:var(--p-tailor)} .prof-enchanting{color:var(--p-ench)}
+.bar{height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent)}
+.skillbox{display:grid;grid-template-columns:1fr auto;gap:.25rem .75rem;align-items:center}
+.skillbox .name{font-weight:600}
+.skillbox .tier{font-size:.8rem;color:var(--muted)}
+.ladder{display:grid;grid-template-columns:7.5rem 1fr;gap:.5rem .75rem;align-items:center}
+.ladder .track{position:relative;height:30px;display:flex;border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+.ladder .band{display:flex;align-items:center;justify-content:center;font-size:.72rem;letter-spacing:.02em;color:var(--fg);border-right:1px solid var(--bg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 .25rem}
+.ladder .marker{position:absolute;top:0;bottom:0;width:3px;background:var(--fg);box-shadow:0 0 0 1px var(--bg)}
+.ladder .axis{grid-column:2;display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);font-family:var(--font-mono)}
+.flow{width:100%;height:auto;max-width:100%}
+.flow text{font-family:var(--font-body);fill:var(--fg)}
+.flow .edge{fill:none;stroke:var(--muted);stroke-width:1.5;opacity:.75}
+.flow .edge.hi{stroke:var(--accent);stroke-width:2.5;opacity:1}
+.flow .edgelabel{font-size:10.5px;fill:var(--muted)}
+.flow .node rect{fill:var(--surface);stroke:var(--line)}
+.flow .node.hi rect{stroke:var(--accent);stroke-width:2}
+.flow .node .t{font-size:12px;font-weight:700}
+.flow .node .s{font-size:11px;fill:var(--muted);font-family:var(--font-mono)}
+.flow .char{font-family:var(--font-display);font-size:13px;font-weight:700;letter-spacing:.06em}
+.flow .charbox{fill:none;stroke:var(--line);stroke-dasharray:4 4}
+.alert{border-left:3px solid var(--warn);padding:.4rem .75rem;background:var(--surface);margin:.35rem 0;font-size:.92rem}
+.alert.good{border-color:var(--good)} .alert.bad{border-color:var(--bad)} .alert.info{border-color:var(--p-bs)}
+.toolbar{display:flex;flex-wrap:wrap;gap:.5rem .75rem;align-items:center;margin-bottom:.75rem}
+.reagents{font-size:.85rem;color:var(--muted)}
+.reagents b{color:var(--fg);font-weight:500}
+details summary{cursor:pointer;color:var(--accent);font-weight:500}
+.editor{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.5rem;align-items:end}
+.editor label{display:flex;flex-direction:column;font-size:.8rem;color:var(--muted);gap:.2rem}
+.editor label input,.editor label select{width:100%}
+.editor .wide{grid-column:1/-1}
+.editor textarea{width:100%;min-height:3.2rem;font-family:var(--font-mono);font-size:.85rem}
+.toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:.5rem 1rem;border-radius:4px;font-size:.9rem;z-index:20;opacity:0;transition:opacity .2s}
+.toast.show{opacity:1}
+.legend{display:flex;flex-wrap:wrap;gap:.4rem 1rem;font-size:.8rem;color:var(--muted)}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.75rem;margin-bottom:1rem}
+.kpi .card{padding:.6rem .8rem}
+.kpi .v{font-family:var(--font-mono);font-size:1.25rem;font-weight:600}
+.kpi .l{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.wear{display:grid;grid-template-columns:auto 1fr;gap:.2rem .75rem;font-size:.92rem}
+.wear dt{color:var(--muted)}
+.wear dd{margin:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:520px){.ladder{grid-template-columns:1fr}.ladder .axis{grid-column:1}.ladder .band{font-size:.62rem}}
+</style>
+<header>
+  <h1>Forever Workshop</h1>
+  <span class="tag">Hunter · Warrior · Priest — six professions, one supply chain</span>
+  <span class="sync" id="syncState">loading…</span>
+</header>
+<nav id="nav">
+  <a href="#map">Map</a><a href="#plan">Next steps</a><a href="#ladder">Ladder</a><a href="#mats">Stack check</a><a href="#prices">Prices &amp; stock</a><a href="#gear">Gear</a><a href="#recipes">Recipes</a><a href="#addons">Addons</a>
+</nav>
+
+<section class="view" id="view-map">
+  <div class="row">
+    <div class="col card" style="flex:2 1 520px">
+      <h2>Where materials flow</h2>
+      <p class="small muted">Thick gold lines are flows that matter at your current skill levels. Click a profession to see what it wants right now.</p>
+      <div id="flow"></div>
+    </div>
+    <div class="col card" style="flex:1 1 280px">
+      <h2>Skill levels</h2>
+      <p class="small muted">Type what the in-game profession window shows. Everything else on this page recomputes from these.</p>
+      <div id="skillInputs"></div>
+      <h3 style="margin-top:1rem">Character levels</h3>
+      <div id="levelInputs" style="margin-top:.4rem"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:1rem">
+    <h2>Right now</h2>
+    <div id="mapAlerts"></div>
+  </div>
+</section>
+
+<section class="view" id="view-plan">
+  <p class="small muted">For each crafting profession: the best skill-up recipes at your current level, ranked by cost per skill point (cost of reagents at Auctionator prices, minus what the result sells or disenchants for). Below that, what the Hunter should gather to feed them.</p>
+  <div id="planBoards" class="grid-2"></div>
+  <div class="card" style="margin-top:1rem">
+    <h2>Hunter's shopping-and-farming list</h2>
+    <p class="small muted">Raw materials the next recipes need, totalled. "Farm" when the Hunter's gathering skill reaches the tier, otherwise "Buy".</p>
+    <div id="farmList"></div>
+  </div>
+</section>
+
+<section class="view" id="view-ladder">
+  <p class="small muted">Each bar is skill 1–300. Bands are the material tier that profession works with at that skill. The dark marker is where you are. When the gatherer's marker sits in a lower band than a crafter's, the crafter is buying mats or waiting.</p>
+  <div class="card" id="ladders"></div>
+  <div class="card" style="margin-top:1rem">
+    <h2>Skinning: which mobs you can skin</h2>
+    <p class="small">Skill needed is 5 × mob level up to level 20, then 10 × level − 100. At <span class="num" id="skinSkill"></span> skinning the Hunter can skin mobs up to level <b class="num" id="skinMaxLevel"></b>. Leather tier follows mob level: Light (1–20), Medium (15–32), Heavy (30–42), Thick (40–52), Rugged (50+).</p>
+  </div>
+  <div class="card" style="margin-top:1rem">
+    <h2>Disenchanting: what an item turns into</h2>
+    <p class="small muted">By the item's level (not required level). Green armor gives mostly dust, green weapons lean toward essence, blues give shards. The Warrior's leveling crafts land in these rows.</p>
+    <div class="tablewrap" id="deTable"></div>
+  </div>
+</section>
+
+<section class="view" id="view-mats">
+  <div class="row">
+    <div class="col card" style="flex:1 1 300px">
+      <h2>I have a stack of…</h2>
+      <div class="toolbar">
+        <select id="matPick"></select>
+        <input type="number" id="matQty" value="20" min="1" step="1">
+      </div>
+      <div id="matVerdict"></div>
+    </div>
+    <div class="col card" style="flex:2 1 420px">
+      <h2>Who on the team can use it</h2>
+      <div id="matUses"></div>
+    </div>
+  </div>
+</section>
+
+<section class="view" id="view-prices">
+  <p class="small muted">Prices in silver per unit, copied from Auctionator (hover an item in your bags, or open the Shopping tab). Leave blank to fall back to the vendor price. "Have" is how many you hold across all three characters.</p>
+  <div class="toolbar">
+    <input type="text" id="priceFilter" placeholder="filter…" style="width:12rem">
+    <label class="inline"><input type="checkbox" id="priceOnlyRelevant" checked> only tiers near my skills</label>
+    <span class="muted small" id="priceCount"></span>
+  </div>
+  <details class="card" style="margin-bottom:.75rem"><summary>Import from the addon (/fw export)</summary><p class="small muted" style="margin-top:.5rem">Paste the whole export string. Character levels, skills, stock across bags and banks, and Auctionator prices are matched by item name. Stock is replaced by the snapshot; prices and skills are updated.</p><textarea id="importText" style="width:100%;min-height:5rem;font-family:var(--font-mono);font-size:.8rem" placeholder='{"v":1,"chars":{...},"prices":{...}}'></textarea><div style="margin-top:.5rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap"><button class="primary" id="importBtn">Import</button><span class="small muted" id="importStatus"></span></div></details>
+  <div class="tablewrap" id="priceTable"></div>
+</section>
+
+<section class="view" id="view-gear">
+  <div id="gearBoards" class="grid-3"></div>
+</section>
+
+<section class="view" id="view-recipes">
+  <p class="small muted">The recipe data is a working set from Classic-era memory. Numbers like reagent counts and skill thresholds may be off by a little. When you see the real tooltip in game, fix it here and it sticks. Skill columns are the four colors: orange (learn), yellow, green, grey.</p>
+  <div class="toolbar">
+    <select id="recipeProf"></select>
+    <input type="text" id="recipeFilter" placeholder="filter…" style="width:12rem">
+    <button id="recipeNew">+ Add recipe</button>
+    <button id="matNew" class="ghost">+ Add material</button>
+  </div>
+  <div id="recipeEditor" class="card" hidden></div>
+  <div class="tablewrap" id="recipeTable"></div>
+</section>
+
+<section class="view" id="view-addons">
+  <div class="grid-2" id="addons"></div>
+</section>
+<div class="toast" id="toast"></div>
+<script>
+// ---------- DATA ----------
+const CHARS = {
+  hunter:{name:"Hunter", profs:["mining","skinning"], armor:[["Leather","1–39"],["Mail","40+"]]},
+  warrior:{name:"Warrior", profs:["blacksmithing","engineering"], armor:[["Mail","1–39"],["Plate","40+"]]},
+  priest:{name:"Priest", profs:["tailoring","enchanting"], armor:[["Cloth","always"]]},
+};
+const PROFS = {
+  mining:{name:"Mining", short:"Mine", char:"hunter", gather:true},
+  skinning:{name:"Skinning", short:"Skin", char:"hunter", gather:true},
+  blacksmithing:{name:"Blacksmithing", short:"BS", char:"warrior"},
+  engineering:{name:"Engineering", short:"Eng", char:"warrior"},
+  tailoring:{name:"Tailoring", short:"Tailor", char:"priest"},
+  enchanting:{name:"Enchanting", short:"Ench", char:"priest"},
+};
+const RANKS = [[1,"Apprentice",75],[75,"Journeyman",150],[150,"Expert",225],[225,"Artisan",300]];
+// Ladder bands: [fromSkill, toSkill, label]
+const TIERS = {
+  mining:[[1,65,"Copper"],[65,125,"Tin · Silver · Bronze"],[125,175,"Iron · Gold · Steel"],[175,245,"Mithril · Truesilver"],[245,300,"Thorium"]],
+  skinning:[[1,100,"Light"],[100,150,"Medium"],[150,200,"Heavy"],[200,250,"Thick"],[250,300,"Rugged"]],
+  blacksmithing:[[1,65,"Copper · Rough stone"],[65,125,"Bronze · Coarse"],[125,200,"Iron · Steel · Heavy"],[200,250,"Mithril · Solid"],[250,300,"Thorium · Dense"]],
+  engineering:[[1,75,"Copper · Rough"],[75,125,"Bronze · Coarse"],[125,200,"Iron · Steel · Heavy"],[200,260,"Mithril · Solid"],[260,300,"Thorium · Dense"]],
+  tailoring:[[1,75,"Linen"],[75,125,"Wool"],[125,175,"Silk"],[175,250,"Mageweave"],[250,300,"Runecloth"]],
+  enchanting:[[1,100,"Strange dust · Magic ess."],[100,150,"Soul dust · Astral"],[150,200,"Vision · Mystic"],[200,250,"Dream · Nether"],[250,300,"Illusion · Eternal"]],
+};
+// Disenchant table by item level: [minIlvl,maxIlvl,dust,essence,shard]
+const DE = [
+  [5,15,"strange_dust","lesser_magic_essence","small_glimmering_shard"],
+  [16,20,"strange_dust","greater_magic_essence","small_glimmering_shard"],
+  [21,25,"soul_dust","lesser_astral_essence","large_glimmering_shard"],
+  [26,30,"soul_dust","greater_astral_essence","small_glowing_shard"],
+  [31,35,"vision_dust","lesser_mystic_essence","large_glowing_shard"],
+  [36,40,"vision_dust","greater_mystic_essence","small_radiant_shard"],
+  [41,45,"dream_dust","lesser_nether_essence","large_radiant_shard"],
+  [46,50,"dream_dust","greater_nether_essence","small_brilliant_shard"],
+  [51,55,"illusion_dust","lesser_eternal_essence","large_brilliant_shard"],
+  [56,65,"illusion_dust","greater_eternal_essence","large_brilliant_shard"],
+];
+// Materials: id -> {n:name, src:how you get it, prof: gathering/crafting profession that produces it, skill: skill needed to produce/gather, tier index, vendor: vendor SELL price in copper (what a vendor pays you), buy: vendor BUY price in copper if sold by vendors}
+const M = {};
+function mat(id,n,o){ M[id]=Object.assign({id,n},o); }
+// Ore & bars
+mat("copper_ore","Copper Ore",{src:"node",prof:"mining",skill:1,vendor:10});
+mat("tin_ore","Tin Ore",{src:"node",prof:"mining",skill:65,vendor:25});
+mat("silver_ore","Silver Ore",{src:"node",prof:"mining",skill:75,vendor:75});
+mat("iron_ore","Iron Ore",{src:"node",prof:"mining",skill:125,vendor:50});
+mat("gold_ore","Gold Ore",{src:"node",prof:"mining",skill:155,vendor:150});
+mat("mithril_ore","Mithril Ore",{src:"node",prof:"mining",skill:175,vendor:100});
+mat("truesilver_ore","Truesilver Ore",{src:"node",prof:"mining",skill:230,vendor:500});
+mat("thorium_ore","Thorium Ore",{src:"node",prof:"mining",skill:245,vendor:200});
+mat("dark_iron_ore","Dark Iron Ore",{src:"node (BRD)",prof:"mining",skill:230,vendor:300});
+mat("coal","Coal",{src:"vendor",buy:500,vendor:125});
+mat("copper_bar","Copper Bar",{src:"smelt",prof:"mining",skill:1,vendor:20});
+mat("tin_bar","Tin Bar",{src:"smelt",prof:"mining",skill:65,vendor:50});
+mat("bronze_bar","Bronze Bar",{src:"smelt",prof:"mining",skill:65,vendor:60});
+mat("silver_bar","Silver Bar",{src:"smelt",prof:"mining",skill:75,vendor:150});
+mat("iron_bar","Iron Bar",{src:"smelt",prof:"mining",skill:125,vendor:100});
+mat("gold_bar","Gold Bar",{src:"smelt",prof:"mining",skill:155,vendor:300});
+mat("steel_bar","Steel Bar",{src:"smelt",prof:"mining",skill:165,vendor:250});
+mat("mithril_bar","Mithril Bar",{src:"smelt",prof:"mining",skill:175,vendor:200});
+mat("truesilver_bar","Truesilver Bar",{src:"smelt",prof:"mining",skill:230,vendor:1000});
+mat("thorium_bar","Thorium Bar",{src:"smelt",prof:"mining",skill:250,vendor:400});
+mat("arcanite_bar","Arcanite Bar",{src:"alchemy transmute (buy)",vendor:2000});
+mat("enchanted_thorium_bar","Enchanted Thorium Bar",{src:"craft",prof:"enchanting",skill:250,vendor:800});
+// Stone & gems (mining byproducts)
+mat("rough_stone","Rough Stone",{src:"node byproduct",prof:"mining",skill:1,vendor:2});
+mat("coarse_stone","Coarse Stone",{src:"node byproduct",prof:"mining",skill:65,vendor:15});
+mat("heavy_stone","Heavy Stone",{src:"node byproduct",prof:"mining",skill:125,vendor:30});
+mat("solid_stone","Solid Stone",{src:"node byproduct",prof:"mining",skill:175,vendor:50});
+mat("dense_stone","Dense Stone",{src:"node byproduct",prof:"mining",skill:245,vendor:100});
+mat("malachite","Malachite",{src:"copper nodes",prof:"mining",skill:1,vendor:50});
+mat("tigerseye","Tigerseye",{src:"copper nodes",prof:"mining",skill:1,vendor:75});
+mat("shadowgem","Shadowgem",{src:"tin/silver nodes",prof:"mining",skill:65,vendor:250});
+mat("moss_agate","Moss Agate",{src:"tin/silver nodes",prof:"mining",skill:65,vendor:400});
+mat("lesser_moonstone","Lesser Moonstone",{src:"iron/gold nodes",prof:"mining",skill:125,vendor:500});
+mat("jade","Jade",{src:"iron/gold nodes",prof:"mining",skill:125,vendor:1000});
+mat("citrine","Citrine",{src:"mithril nodes",prof:"mining",skill:175,vendor:1500});
+mat("aquamarine","Aquamarine",{src:"mithril nodes",prof:"mining",skill:175,vendor:2000});
+mat("star_ruby","Star Ruby",{src:"mithril/thorium nodes",prof:"mining",skill:200,vendor:3000});
+// Leather
+mat("ruined_leather_scraps","Ruined Leather Scraps",{src:"skin",prof:"skinning",skill:1,vendor:2});
+mat("light_leather","Light Leather",{src:"skin",prof:"skinning",skill:1,vendor:10});
+mat("medium_leather","Medium Leather",{src:"skin",prof:"skinning",skill:100,vendor:30});
+mat("heavy_leather","Heavy Leather",{src:"skin",prof:"skinning",skill:150,vendor:80});
+mat("thick_leather","Thick Leather",{src:"skin",prof:"skinning",skill:200,vendor:150});
+mat("rugged_leather","Rugged Leather",{src:"skin",prof:"skinning",skill:250,vendor:300});
+mat("light_hide","Light Hide",{src:"skin",prof:"skinning",skill:1,vendor:20});
+mat("medium_hide","Medium Hide",{src:"skin",prof:"skinning",skill:100,vendor:60});
+mat("heavy_hide","Heavy Hide",{src:"skin",prof:"skinning",skill:150,vendor:150});
+mat("thick_hide","Thick Hide",{src:"skin",prof:"skinning",skill:200,vendor:300});
+mat("rugged_hide","Rugged Hide",{src:"skin",prof:"skinning",skill:250,vendor:600});
+// Cloth (drops from humanoids, anyone)
+mat("linen_cloth","Linen Cloth",{src:"drop (lvl 5–20 humanoids)",tier:0,vendor:12});
+mat("wool_cloth","Wool Cloth",{src:"drop (lvl 15–30)",tier:1,vendor:50});
+mat("silk_cloth","Silk Cloth",{src:"drop (lvl 30–40)",tier:2,vendor:100});
+mat("mageweave_cloth","Mageweave Cloth",{src:"drop (lvl 40–50)",tier:3,vendor:250});
+mat("runecloth","Runecloth",{src:"drop (lvl 50+)",tier:4,vendor:400});
+mat("felcloth","Felcloth",{src:"drop (demons)",tier:4,vendor:1000});
+mat("spiders_silk","Spider's Silk",{src:"drop (spiders)",tier:1,vendor:250});
+mat("bolt_of_linen_cloth","Bolt of Linen Cloth",{src:"craft",prof:"tailoring",skill:1,vendor:25});
+mat("bolt_of_woolen_cloth","Bolt of Woolen Cloth",{src:"craft",prof:"tailoring",skill:75,vendor:150});
+mat("bolt_of_silk_cloth","Bolt of Silk Cloth",{src:"craft",prof:"tailoring",skill:125,vendor:400});
+mat("bolt_of_mageweave","Bolt of Mageweave",{src:"craft",prof:"tailoring",skill:175,vendor:1250});
+mat("bolt_of_runecloth","Bolt of Runecloth",{src:"craft",prof:"tailoring",skill:250,vendor:2000});
+mat("coarse_thread","Coarse Thread",{src:"vendor",buy:10,vendor:2});
+mat("fine_thread","Fine Thread",{src:"vendor",buy:100,vendor:25});
+mat("silken_thread","Silken Thread",{src:"vendor",buy:500,vendor:125});
+mat("heavy_silken_thread","Heavy Silken Thread",{src:"vendor",buy:2000,vendor:500});
+mat("rune_thread","Rune Thread",{src:"vendor",buy:5000,vendor:1250});
+mat("blue_dye","Blue Dye",{src:"vendor",buy:50,vendor:12});
+mat("red_dye","Red Dye",{src:"vendor",buy:50,vendor:12});
+mat("bleach","Bleach",{src:"vendor",buy:25,vendor:6});
+// Enchanting mats
+const ENCH = [["strange_dust","Strange Dust",0,50],["lesser_magic_essence","Lesser Magic Essence",0,200],["greater_magic_essence","Greater Magic Essence",0,600],["small_glimmering_shard","Small Glimmering Shard",0,500],["large_glimmering_shard","Large Glimmering Shard",1,1000],
+["soul_dust","Soul Dust",1,250],["lesser_astral_essence","Lesser Astral Essence",1,600],["greater_astral_essence","Greater Astral Essence",1,1800],["small_glowing_shard","Small Glowing Shard",1,1500],["large_glowing_shard","Large Glowing Shard",2,3000],
+["vision_dust","Vision Dust",2,500],["lesser_mystic_essence","Lesser Mystic Essence",2,1000],["greater_mystic_essence","Greater Mystic Essence",2,3000],["small_radiant_shard","Small Radiant Shard",2,3000],["large_radiant_shard","Large Radiant Shard",3,6000],
+["dream_dust","Dream Dust",3,800],["lesser_nether_essence","Lesser Nether Essence",3,1500],["greater_nether_essence","Greater Nether Essence",3,4500],["small_brilliant_shard","Small Brilliant Shard",3,5000],["large_brilliant_shard","Large Brilliant Shard",4,10000],
+["illusion_dust","Illusion Dust",4,1200],["lesser_eternal_essence","Lesser Eternal Essence",4,2500],["greater_eternal_essence","Greater Eternal Essence",4,7500]];
+ENCH.forEach(([id,n,t])=>mat(id,n,{src:"disenchant (no vendor value; set an AH price)",prof:"enchanting",tier:t}));
+mat("copper_rod","Copper Rod",{src:"vendor",buy:124,vendor:31});
+mat("silver_rod","Silver Rod",{src:"craft",prof:"blacksmithing",skill:100,vendor:200});
+mat("golden_rod","Golden Rod",{src:"craft",prof:"blacksmithing",skill:150,vendor:400});
+mat("truesilver_rod","Truesilver Rod",{src:"craft",prof:"blacksmithing",skill:200,vendor:1200});
+mat("arcanite_rod","Arcanite Rod",{src:"craft",prof:"blacksmithing",skill:290,vendor:3000});
+mat("iridescent_pearl","Iridescent Pearl",{src:"clams / AH",vendor:500});
+mat("black_pearl","Black Pearl",{src:"clams / AH",vendor:2000});
+mat("golden_pearl","Golden Pearl",{src:"clams / AH",vendor:5000});
+mat("simple_wood","Simple Wood",{src:"vendor",buy:50,vendor:12});
+mat("star_wood","Star Wood",{src:"vendor",buy:1500,vendor:375});
+mat("maple_seed","Maple Seed",{src:"vendor",buy:150,vendor:37});
+mat("stranglethorn_seed","Stranglethorn Seed",{src:"vendor",buy:800,vendor:200});
+mat("empty_vial","Empty Vial",{src:"vendor",buy:20,vendor:5});
+mat("leaded_vial","Leaded Vial",{src:"vendor",buy:200,vendor:50});
+mat("crystal_vial","Crystal Vial",{src:"vendor",buy:400,vendor:100});
+mat("purple_lotus","Purple Lotus",{src:"herb (AH)",vendor:400});
+mat("firebloom","Firebloom",{src:"herb (AH)",vendor:300});
+// Engineering parts & vendor bits
+mat("weak_flux","Weak Flux",{src:"vendor",buy:100,vendor:25});
+mat("strong_flux","Strong Flux",{src:"vendor",buy:2000,vendor:500});
+mat("wooden_stock","Wooden Stock",{src:"vendor",buy:200,vendor:50});
+mat("heavy_stock","Heavy Stock",{src:"vendor",buy:1000,vendor:250});
+mat("rough_blasting_powder","Rough Blasting Powder",{src:"craft",prof:"engineering",skill:1,vendor:5});
+mat("coarse_blasting_powder","Coarse Blasting Powder",{src:"craft",prof:"engineering",skill:75,vendor:25});
+mat("heavy_blasting_powder","Heavy Blasting Powder",{src:"craft",prof:"engineering",skill:125,vendor:60});
+mat("solid_blasting_powder","Solid Blasting Powder",{src:"craft",prof:"engineering",skill:175,vendor:100});
+mat("dense_blasting_powder","Dense Blasting Powder",{src:"craft",prof:"engineering",skill:250,vendor:200});
+mat("handful_of_copper_bolts","Handful of Copper Bolts",{src:"craft",prof:"engineering",skill:1,vendor:25});
+mat("copper_tube","Copper Tube",{src:"craft",prof:"engineering",skill:50,vendor:100});
+mat("bronze_tube","Bronze Tube",{src:"craft",prof:"engineering",skill:105,vendor:250});
+mat("bronze_framework","Bronze Framework",{src:"craft",prof:"engineering",skill:105,vendor:250});
+mat("whirring_bronze_gizmo","Whirring Bronze Gizmo",{src:"craft",prof:"engineering",skill:125,vendor:250});
+mat("iron_strut","Iron Strut",{src:"craft",prof:"engineering",skill:150,vendor:300});
+mat("gold_power_core","Gold Power Core",{src:"craft",prof:"engineering",skill:150,vendor:500});
+mat("gyrochronatom","Gyrochronatom",{src:"craft",prof:"engineering",skill:150,vendor:600});
+mat("mithril_tube","Mithril Tube",{src:"craft",prof:"engineering",skill:195,vendor:800});
+mat("unstable_trigger","Unstable Trigger",{src:"craft",prof:"engineering",skill:200,vendor:600});
+mat("mithril_casing","Mithril Casing",{src:"craft",prof:"engineering",skill:215,vendor:800});
+mat("thorium_widget","Thorium Widget",{src:"craft",prof:"engineering",skill:260,vendor:1500});
+mat("thorium_tube","Thorium Tube",{src:"craft",prof:"engineering",skill:275,vendor:3000});
+// Blacksmithing intermediates
+mat("rough_sharpening_stone","Rough Sharpening Stone",{src:"craft",prof:"blacksmithing",skill:1,vendor:5});
+mat("rough_grinding_stone","Rough Grinding Stone",{src:"craft",prof:"blacksmithing",skill:25,vendor:10});
+mat("coarse_grinding_stone","Coarse Grinding Stone",{src:"craft",prof:"blacksmithing",skill:75,vendor:40});
+mat("heavy_grinding_stone","Heavy Grinding Stone",{src:"craft",prof:"blacksmithing",skill:125,vendor:100});
+mat("solid_grinding_stone","Solid Grinding Stone",{src:"craft",prof:"blacksmithing",skill:200,vendor:200});
+mat("dense_grinding_stone","Dense Grinding Stone",{src:"craft",prof:"blacksmithing",skill:250,vendor:400});
+// Recipes. sk = [orange, yellow, green, grey]. re = reagents. out = {id, q} (id is a material id, or the recipe's own id for gear). kind: part|gear|weapon|ranged|rod|ench|oil|wand|bag|ammo|scope|bar. wear = who on the team uses it.
+const R = [];
+function rec(id,prof,n,sk,re,o){ R.push(Object.assign({id,prof,n,sk,re,out:{id,q:1},kind:"part"},o)); }
+// --- MINING (smelting) ---
+rec("smelt_copper","mining","Smelt Copper",[1,25,47,70],{copper_ore:1},{out:{id:"copper_bar",q:1},kind:"bar"});
+rec("smelt_tin","mining","Smelt Tin",[65,75,95,115],{tin_ore:1},{out:{id:"tin_bar",q:1},kind:"bar"});
+rec("smelt_bronze","mining","Smelt Bronze",[65,90,110,130],{copper_bar:1,tin_bar:1},{out:{id:"bronze_bar",q:2},kind:"bar"});
+rec("smelt_silver","mining","Smelt Silver",[75,100,112,125],{silver_ore:1},{out:{id:"silver_bar",q:1},kind:"bar"});
+rec("smelt_iron","mining","Smelt Iron",[125,150,170,190],{iron_ore:1},{out:{id:"iron_bar",q:1},kind:"bar"});
+rec("smelt_gold","mining","Smelt Gold",[155,175,190,205],{gold_ore:1},{out:{id:"gold_bar",q:1},kind:"bar"});
+rec("smelt_steel","mining","Smelt Steel",[165,180,200,220],{iron_bar:1,coal:1},{out:{id:"steel_bar",q:1},kind:"bar"});
+rec("smelt_mithril","mining","Smelt Mithril",[175,200,225,250],{mithril_ore:1},{out:{id:"mithril_bar",q:1},kind:"bar"});
+rec("smelt_truesilver","mining","Smelt Truesilver",[230,240,260,280],{truesilver_ore:1},{out:{id:"truesilver_bar",q:1},kind:"bar"});
+rec("smelt_thorium","mining","Smelt Thorium",[250,275,290,300],{thorium_ore:1},{out:{id:"thorium_bar",q:1},kind:"bar"});
+// --- BLACKSMITHING ---
+rec("rough_sharpening_stone","blacksmithing","Rough Sharpening Stone",[1,15,25,45],{rough_stone:1},{out:{id:"rough_sharpening_stone",q:1}});
+rec("rough_grinding_stone","blacksmithing","Rough Grinding Stone",[25,45,55,65],{rough_stone:2},{out:{id:"rough_grinding_stone",q:1}});
+rec("copper_chain_belt","blacksmithing","Copper Chain Belt",[1,35,55,75],{copper_bar:6},{kind:"gear",ilvl:9,slot:"Mail waist",wear:["warrior","hunter40"]});
+rec("copper_chain_boots","blacksmithing","Copper Chain Boots",[20,40,60,80],{copper_bar:8},{kind:"gear",ilvl:14,slot:"Mail feet",wear:["warrior"]});
+rec("copper_axe","blacksmithing","Copper Axe",[20,40,55,70],{copper_bar:3,linen_cloth:2},{kind:"weapon",ilvl:10,slot:"1H axe",wear:["warrior"]});
+rec("heavy_copper_maul","blacksmithing","Heavy Copper Maul",[30,50,65,80],{copper_bar:8,linen_cloth:2},{kind:"weapon",ilvl:15,slot:"2H mace",wear:["warrior"]});
+rec("runed_copper_belt","blacksmithing","Runed Copper Belt",[35,60,75,95],{copper_bar:10,rough_grinding_stone:1},{kind:"gear",ilvl:15,slot:"Mail waist",wear:["warrior"]});
+rec("coarse_sharpening_stone","blacksmithing","Coarse Sharpening Stone",[65,80,95,115],{coarse_stone:1});
+rec("coarse_grinding_stone","blacksmithing","Coarse Grinding Stone",[75,85,95,115],{coarse_stone:2},{out:{id:"coarse_grinding_stone",q:1}});
+rec("silver_rod","blacksmithing","Silver Rod",[100,105,110,115],{silver_bar:1,rough_grinding_stone:1},{out:{id:"silver_rod",q:1},kind:"rod",wear:["priest"]});
+rec("rough_bronze_leggings","blacksmithing","Rough Bronze Leggings",[95,115,125,135],{bronze_bar:6},{kind:"gear",ilvl:20,slot:"Mail legs",wear:["warrior"]});
+rec("patterned_bronze_bracers","blacksmithing","Patterned Bronze Bracers",[105,125,135,145],{bronze_bar:5,coarse_grinding_stone:2},{kind:"gear",ilvl:22,slot:"Mail wrist",wear:["warrior"]});
+rec("big_bronze_knife","blacksmithing","Big Bronze Knife",[105,125,135,145],{bronze_bar:6,coarse_grinding_stone:2,heavy_leather:1},{kind:"weapon",ilvl:21,slot:"Dagger",wear:["priest"]});
+rec("heavy_grinding_stone","blacksmithing","Heavy Grinding Stone",[125,135,145,155],{heavy_stone:3},{out:{id:"heavy_grinding_stone",q:1}});
+rec("green_iron_leggings","blacksmithing","Green Iron Leggings",[140,160,170,180],{iron_bar:8,heavy_grinding_stone:1},{kind:"gear",ilvl:33,slot:"Mail legs",wear:["warrior","hunter40"]});
+rec("green_iron_bracers","blacksmithing","Green Iron Bracers",[150,170,180,190],{iron_bar:6},{kind:"gear",ilvl:34,slot:"Mail wrist",wear:["warrior","hunter40"]});
+rec("golden_rod","blacksmithing","Golden Rod",[150,155,160,165],{gold_bar:1,coarse_grinding_stone:1},{out:{id:"golden_rod",q:1},kind:"rod",wear:["priest"]});
+rec("iron_shield_spike","blacksmithing","Iron Shield Spike",[160,180,190,200],{iron_bar:6,heavy_grinding_stone:2},{kind:"ench",slot:"Shield spike",wear:["warrior"]});
+rec("solid_grinding_stone","blacksmithing","Solid Grinding Stone",[200,205,215,225],{solid_stone:4},{out:{id:"solid_grinding_stone",q:1}});
+rec("steel_plate_helm","blacksmithing","Steel Plate Helm",[195,215,225,235],{steel_bar:14,solid_grinding_stone:1},{kind:"gear",ilvl:39,slot:"Plate head",wear:["warrior"]});
+rec("truesilver_rod","blacksmithing","Truesilver Rod",[200,205,210,215],{truesilver_bar:1,heavy_grinding_stone:1},{out:{id:"truesilver_rod",q:1},kind:"rod",wear:["priest"]});
+rec("heavy_mithril_pants","blacksmithing","Heavy Mithril Pants",[200,220,230,240],{mithril_bar:8},{kind:"gear",ilvl:41,slot:"Plate legs",wear:["warrior"]});
+rec("heavy_mithril_gauntlet","blacksmithing","Heavy Mithril Gauntlet",[210,230,240,250],{mithril_bar:6,mageweave_cloth:4},{kind:"gear",ilvl:42,slot:"Plate hands",wear:["warrior"]});
+rec("mithril_scale_pants","blacksmithing","Mithril Scale Pants",[215,235,245,255],{mithril_bar:12,solid_grinding_stone:1},{kind:"gear",ilvl:44,slot:"Mail legs",wear:["hunter40"]});
+rec("mithril_spurs","blacksmithing","Mithril Spurs",[215,235,245,255],{mithril_bar:4,solid_grinding_stone:1},{kind:"ench",slot:"Boot enchant (mount speed)",wear:["warrior","hunter","priest"]});
+rec("mithril_shield_spike","blacksmithing","Mithril Shield Spike",[215,235,245,255],{mithril_bar:8,solid_grinding_stone:2,truesilver_bar:1},{kind:"ench",slot:"Shield spike",wear:["warrior"]});
+rec("mithril_coif","blacksmithing","Mithril Coif",[230,250,260,270],{mithril_bar:10,mageweave_cloth:6},{kind:"gear",ilvl:48,slot:"Mail head",wear:["hunter40"]});
+rec("dense_grinding_stone","blacksmithing","Dense Grinding Stone",[250,255,265,275],{dense_stone:3},{out:{id:"dense_grinding_stone",q:1}});
+rec("thorium_armor","blacksmithing","Thorium Armor",[250,270,280,290],{thorium_bar:8,star_ruby:1},{kind:"gear",ilvl:51,slot:"Plate chest",wear:["warrior"]});
+rec("imperial_plate_bracers","blacksmithing","Imperial Plate Bracers",[265,285,295,305],{thorium_bar:12},{kind:"gear",ilvl:55,slot:"Plate wrist",wear:["warrior"]});
+rec("imperial_plate_belt","blacksmithing","Imperial Plate Belt",[265,285,295,305],{thorium_bar:10,star_ruby:1},{kind:"gear",ilvl:55,slot:"Plate waist",wear:["warrior"]});
+rec("imperial_plate_boots","blacksmithing","Imperial Plate Boots",[285,295,300,305],{thorium_bar:18},{kind:"gear",ilvl:58,slot:"Plate feet",wear:["warrior"]});
+rec("thorium_shield_spike","blacksmithing","Thorium Shield Spike",[285,295,300,305],{thorium_bar:8,dense_grinding_stone:2,star_ruby:1},{kind:"ench",slot:"Shield spike",wear:["warrior"]});
+rec("arcanite_rod","blacksmithing","Arcanite Rod",[290,295,300,305],{arcanite_bar:1,dense_grinding_stone:1},{out:{id:"arcanite_rod",q:1},kind:"rod",wear:["priest"]});
+rec("enchanted_thorium_leggings","blacksmithing","Enchanted Thorium Leggings",[290,295,300,305],{enchanted_thorium_bar:12,star_ruby:1,rugged_leather:2},{kind:"gear",ilvl:60,slot:"Plate legs",wear:["warrior"]});
+// --- ENGINEERING ---
+rec("rough_blasting_powder","engineering","Rough Blasting Powder",[1,20,30,40],{rough_stone:1},{out:{id:"rough_blasting_powder",q:1}});
+rec("handful_of_copper_bolts","engineering","Handful of Copper Bolts",[1,30,45,60],{copper_bar:1},{out:{id:"handful_of_copper_bolts",q:1}});
+rec("rough_copper_bomb","engineering","Rough Copper Bomb",[30,45,55,65],{handful_of_copper_bolts:2,copper_bar:1,rough_blasting_powder:1,linen_cloth:1},{kind:"consumable"});
+rec("copper_tube","engineering","Copper Tube",[50,70,80,90],{copper_bar:2,weak_flux:1},{out:{id:"copper_tube",q:1}});
+rec("crafted_light_shot","engineering","Crafted Light Shot ×200",[50,65,75,85],{copper_bar:1,rough_blasting_powder:1},{kind:"ammo",wear:["hunter"],out:{id:"crafted_light_shot",q:200}});
+rec("rough_boomstick","engineering","Rough Boomstick",[50,70,80,90],{copper_tube:1,wooden_stock:1,handful_of_copper_bolts:1},{kind:"ranged",ilvl:12,slot:"Gun",wear:["hunter"]});
+rec("crude_scope","engineering","Crude Scope",[60,80,90,100],{copper_tube:1,malachite:1},{kind:"scope",wear:["hunter"]});
+rec("coarse_blasting_powder","engineering","Coarse Blasting Powder",[75,85,95,105],{coarse_stone:1},{out:{id:"coarse_blasting_powder",q:1}});
+rec("bronze_tube","engineering","Bronze Tube",[105,120,130,140],{bronze_bar:2,weak_flux:1},{out:{id:"bronze_tube",q:1}});
+rec("bronze_framework","engineering","Bronze Framework",[105,125,135,145],{bronze_bar:2,medium_leather:1,wool_cloth:1},{out:{id:"bronze_framework",q:1}});
+rec("deadly_blunderbuss","engineering","Deadly Blunderbuss",[105,125,135,145],{bronze_tube:1,heavy_stock:1,handful_of_copper_bolts:2,coarse_blasting_powder:1},{kind:"ranged",ilvl:21,slot:"Gun",wear:["hunter"]});
+rec("standard_scope","engineering","Standard Scope",[110,130,140,150],{bronze_tube:1,moss_agate:1},{kind:"scope",wear:["hunter"]});
+rec("crafted_heavy_shot","engineering","Crafted Heavy Shot ×200",[115,130,140,150],{bronze_bar:1,coarse_blasting_powder:1},{kind:"ammo",wear:["hunter"],out:{id:"crafted_heavy_shot",q:200}});
+rec("whirring_bronze_gizmo","engineering","Whirring Bronze Gizmo",[125,140,150,160],{bronze_bar:2,wool_cloth:1},{out:{id:"whirring_bronze_gizmo",q:1}});
+rec("heavy_blasting_powder","engineering","Heavy Blasting Powder",[125,135,145,155],{heavy_stone:1},{out:{id:"heavy_blasting_powder",q:1}});
+rec("razor_arrow","engineering","Razor Arrow ×200",[125,140,150,160],{bronze_bar:1,wooden_stock:1},{kind:"ammo",wear:["hunter"],out:{id:"razor_arrow",q:200}});
+rec("iron_strut","engineering","Iron Strut",[150,160,170,180],{iron_bar:2},{out:{id:"iron_strut",q:1}});
+rec("gold_power_core","engineering","Gold Power Core",[150,160,170,180],{gold_bar:1},{out:{id:"gold_power_core",q:1}});
+rec("gyrochronatom","engineering","Gyrochronatom",[150,160,170,180],{iron_bar:1,gold_power_core:1},{out:{id:"gyrochronatom",q:1}});
+rec("moonsight_rifle","engineering","Moonsight Rifle",[145,165,175,185],{bronze_tube:1,heavy_stock:1,iron_bar:2,moss_agate:1},{kind:"ranged",ilvl:30,slot:"Gun",wear:["hunter"]});
+rec("jagged_arrow","engineering","Jagged Arrow ×200",[175,190,200,210],{iron_bar:1,heavy_stock:1},{kind:"ammo",wear:["hunter"],out:{id:"jagged_arrow",q:200}});
+rec("crafted_solid_shot","engineering","Crafted Solid Shot ×200",[175,190,200,210],{iron_bar:1,heavy_blasting_powder:1},{kind:"ammo",wear:["hunter"],out:{id:"crafted_solid_shot",q:200}});
+rec("solid_blasting_powder","engineering","Solid Blasting Powder",[175,185,195,205],{solid_stone:2},{out:{id:"solid_blasting_powder",q:1}});
+rec("mithril_tube","engineering","Mithril Tube",[195,205,215,225],{mithril_bar:3},{out:{id:"mithril_tube",q:1}});
+rec("unstable_trigger","engineering","Unstable Trigger",[200,210,220,230],{mithril_bar:1,mageweave_cloth:1,solid_blasting_powder:1},{out:{id:"unstable_trigger",q:1}});
+rec("mithril_blunderbuss","engineering","Mithril Blunderbuss",[205,225,235,245],{mithril_tube:1,heavy_stock:1,mithril_bar:2,solid_blasting_powder:1},{kind:"ranged",ilvl:42,slot:"Gun",wear:["hunter"]});
+rec("deadly_scope","engineering","Deadly Scope",[210,230,240,250],{mithril_tube:1,aquamarine:1},{kind:"scope",wear:["hunter"]});
+rec("mithril_casing","engineering","Mithril Casing",[215,225,235,245],{mithril_bar:3},{out:{id:"mithril_casing",q:1}});
+rec("mithril_heavy_bore_rifle","engineering","Mithril Heavy-bore Rifle",[230,250,260,270],{mithril_tube:1,heavy_stock:1,mithril_bar:4,solid_blasting_powder:1},{kind:"ranged",ilvl:48,slot:"Gun",wear:["hunter"]});
+rec("hi_explosive_bomb","engineering","Hi-Explosive Bomb",[235,245,255,265],{mithril_casing:2,unstable_trigger:1,solid_blasting_powder:2},{kind:"consumable"});
+rec("sniper_scope","engineering","Sniper Scope",[240,260,270,280],{mithril_tube:1,citrine:1,gyrochronatom:1},{kind:"scope",wear:["hunter"]});
+rec("dense_blasting_powder","engineering","Dense Blasting Powder",[250,260,270,280],{dense_stone:2},{out:{id:"dense_blasting_powder",q:1}});
+rec("thorium_widget","engineering","Thorium Widget",[260,270,280,290],{thorium_bar:3,runecloth:1},{out:{id:"thorium_widget",q:1}});
+rec("thorium_tube","engineering","Thorium Tube",[275,285,295,305],{thorium_bar:6},{out:{id:"thorium_tube",q:1}});
+rec("thorium_rifle","engineering","Thorium Rifle",[270,285,295,305],{thorium_tube:1,heavy_stock:1,thorium_widget:1,dense_blasting_powder:2},{kind:"ranged",ilvl:56,slot:"Gun",wear:["hunter"]});
+rec("thorium_shells","engineering","Thorium Shells ×200",[285,295,300,305],{thorium_bar:1,dense_blasting_powder:1},{kind:"ammo",wear:["hunter"],out:{id:"thorium_shells",q:200}});
+rec("thorium_headed_arrow","engineering","Thorium Headed Arrow ×200",[285,295,300,305],{thorium_bar:1,heavy_stock:1},{kind:"ammo",wear:["hunter"],out:{id:"thorium_headed_arrow",q:200}});
+// --- TAILORING ---
+rec("bolt_of_linen_cloth","tailoring","Bolt of Linen Cloth",[1,25,40,55],{linen_cloth:2},{out:{id:"bolt_of_linen_cloth",q:1}});
+rec("linen_belt","tailoring","Linen Belt",[1,20,35,50],{bolt_of_linen_cloth:1,coarse_thread:1},{kind:"gear",ilvl:7,slot:"Cloth waist",wear:["priest"]});
+rec("heavy_linen_gloves","tailoring","Heavy Linen Gloves",[40,55,65,80],{bolt_of_linen_cloth:2,coarse_thread:1},{kind:"gear",ilvl:12,slot:"Cloth hands",wear:["priest"]});
+rec("linen_bag","tailoring","Linen Bag (6 slot)",[45,55,65,75],{bolt_of_linen_cloth:3,coarse_thread:3},{kind:"bag",wear:["hunter","warrior","priest"]});
+rec("reinforced_linen_cape","tailoring","Reinforced Linen Cape",[60,75,85,100],{bolt_of_linen_cloth:2,coarse_thread:1},{kind:"gear",ilvl:17,slot:"Cloak",wear:["hunter","warrior","priest"]});
+rec("bolt_of_woolen_cloth","tailoring","Bolt of Woolen Cloth",[75,80,90,100],{wool_cloth:3},{out:{id:"bolt_of_woolen_cloth",q:1}});
+rec("woolen_bag","tailoring","Woolen Bag (8 slot)",[85,105,115,125],{bolt_of_woolen_cloth:3,fine_thread:1},{kind:"bag",wear:["hunter","warrior","priest"]});
+rec("woolen_boots","tailoring","Woolen Boots",[95,115,125,135],{bolt_of_woolen_cloth:2,light_leather:2,fine_thread:1},{kind:"gear",ilvl:20,slot:"Cloth feet",wear:["priest"]});
+rec("heavy_woolen_pants","tailoring","Heavy Woolen Pants",[100,120,130,140],{bolt_of_woolen_cloth:3,fine_thread:1},{kind:"gear",ilvl:22,slot:"Cloth legs",wear:["priest"]});
+rec("double_stitched_woolen_shoulders","tailoring","Double-stitched Woolen Shoulders",[110,130,140,150],{bolt_of_woolen_cloth:3,fine_thread:2},{kind:"gear",ilvl:24,slot:"Cloth shoulder",wear:["priest"]});
+rec("bolt_of_silk_cloth","tailoring","Bolt of Silk Cloth",[125,135,145,155],{silk_cloth:4},{out:{id:"bolt_of_silk_cloth",q:1}});
+rec("spidersilk_boots","tailoring","Spidersilk Boots",[140,160,170,180],{bolt_of_silk_cloth:2,spiders_silk:2,bolt_of_woolen_cloth:2,silken_thread:1},{kind:"gear",ilvl:29,slot:"Cloth feet",wear:["priest"]});
+rec("azure_silk_hood","tailoring","Azure Silk Hood",[145,165,175,185],{bolt_of_silk_cloth:2,blue_dye:2,silken_thread:1},{kind:"gear",ilvl:29,slot:"Cloth head",wear:["priest"]});
+rec("silk_headband","tailoring","Silk Headband",[150,170,180,190],{bolt_of_silk_cloth:3,silken_thread:2},{kind:"gear",ilvl:30,slot:"Cloth head",wear:["priest"]});
+rec("small_silk_pack","tailoring","Small Silk Pack (10 slot)",[150,165,175,185],{bolt_of_silk_cloth:3,silken_thread:3},{kind:"bag",wear:["hunter","warrior","priest"]});
+rec("bolt_of_mageweave","tailoring","Bolt of Mageweave",[175,180,185,190],{mageweave_cloth:5},{out:{id:"bolt_of_mageweave",q:1}});
+rec("black_mageweave_leggings","tailoring","Black Mageweave Leggings",[185,205,215,225],{bolt_of_mageweave:2,silken_thread:1},{kind:"gear",ilvl:40,slot:"Cloth legs",wear:["priest"]});
+rec("black_mageweave_vest","tailoring","Black Mageweave Vest",[185,205,215,225],{bolt_of_mageweave:2,silken_thread:3},{kind:"gear",ilvl:40,slot:"Cloth chest",wear:["priest"]});
+rec("black_mageweave_gloves","tailoring","Black Mageweave Gloves",[205,220,230,240],{bolt_of_mageweave:2,heavy_silken_thread:2},{kind:"gear",ilvl:43,slot:"Cloth hands",wear:["priest"]});
+rec("black_mageweave_boots","tailoring","Black Mageweave Boots",[205,220,230,240],{bolt_of_mageweave:2,heavy_silken_thread:2,thick_leather:2},{kind:"gear",ilvl:43,slot:"Cloth feet",wear:["priest"]});
+rec("black_mageweave_shoulders","tailoring","Black Mageweave Shoulders",[210,225,235,245],{bolt_of_mageweave:3,heavy_silken_thread:2},{kind:"gear",ilvl:44,slot:"Cloth shoulder",wear:["priest"]});
+rec("mageweave_bag","tailoring","Mageweave Bag (12 slot)",[225,235,245,255],{bolt_of_mageweave:4,heavy_silken_thread:2},{kind:"bag",wear:["hunter","warrior","priest"]});
+rec("black_mageweave_headband","tailoring","Black Mageweave Headband",[230,240,250,260],{bolt_of_mageweave:3,heavy_silken_thread:2},{kind:"gear",ilvl:46,slot:"Cloth head",wear:["priest"]});
+rec("bolt_of_runecloth","tailoring","Bolt of Runecloth",[250,255,260,265],{runecloth:5},{out:{id:"bolt_of_runecloth",q:1}});
+rec("runecloth_belt","tailoring","Runecloth Belt",[255,265,275,285],{bolt_of_runecloth:3,rune_thread:1},{kind:"gear",ilvl:52,slot:"Cloth waist",wear:["priest"]});
+rec("runecloth_bag","tailoring","Runecloth Bag (14 slot)",[260,270,280,290],{bolt_of_runecloth:5,rugged_leather:2,rune_thread:1},{kind:"bag",wear:["hunter","warrior","priest"]});
+rec("runecloth_gloves","tailoring","Runecloth Gloves",[275,285,295,305],{bolt_of_runecloth:4,rugged_leather:4,rune_thread:1},{kind:"gear",ilvl:56,slot:"Cloth hands",wear:["priest"]});
+rec("runecloth_boots","tailoring","Runecloth Boots",[275,285,295,305],{bolt_of_runecloth:4,rugged_leather:2,rune_thread:1},{kind:"gear",ilvl:56,slot:"Cloth feet",wear:["priest"]});
+rec("runecloth_headband","tailoring","Runecloth Headband",[290,295,300,305],{bolt_of_runecloth:6,rune_thread:2},{kind:"gear",ilvl:58,slot:"Cloth head",wear:["priest"]});
+// --- ENCHANTING ---
+rec("runed_copper_rod","enchanting","Runed Copper Rod",[1,5,7,10],{copper_rod:1,strange_dust:1,lesser_magic_essence:1},{kind:"rod"});
+rec("ench_bracer_minor_health","enchanting","Enchant Bracer – Minor Health",[1,25,45,70],{strange_dust:1},{kind:"ench",slot:"Bracer",wear:["hunter","warrior","priest"]});
+rec("lesser_magic_wand","enchanting","Lesser Magic Wand",[10,45,60,75],{simple_wood:1,lesser_magic_essence:1},{kind:"wand",ilvl:10,slot:"Wand",wear:["priest"]});
+rec("minor_wizard_oil","enchanting","Minor Wizard Oil",[45,65,75,85],{strange_dust:2,maple_seed:1,empty_vial:1},{kind:"oil",wear:["priest"]});
+rec("ench_bracer_minor_deflection","enchanting","Enchant Bracer – Minor Deflection",[50,80,95,110],{lesser_magic_essence:1,strange_dust:1},{kind:"ench",slot:"Bracer",wear:["hunter","warrior","priest"]});
+rec("greater_magic_wand","enchanting","Greater Magic Wand",[70,90,105,120],{simple_wood:1,greater_magic_essence:1},{kind:"wand",ilvl:17,slot:"Wand",wear:["priest"]});
+rec("ench_bracer_minor_stamina","enchanting","Enchant Bracer – Minor Stamina",[80,100,115,130],{strange_dust:2},{kind:"ench",slot:"Bracer",wear:["hunter","warrior","priest"]});
+rec("ench_bracer_minor_agility","enchanting","Enchant Bracer – Minor Agility",[80,100,115,130],{strange_dust:2,greater_magic_essence:1},{kind:"ench",slot:"Bracer",wear:["hunter"]});
+rec("ench_shield_minor_stamina","enchanting","Enchant Shield – Minor Stamina",[105,125,135,145],{strange_dust:1,lesser_magic_essence:1},{kind:"ench",slot:"Shield",wear:["warrior"]});
+rec("runed_silver_rod","enchanting","Runed Silver Rod",[100,105,110,120],{silver_rod:1,strange_dust:6,greater_magic_essence:3},{kind:"rod"});
+rec("ench_bracer_lesser_stamina","enchanting","Enchant Bracer – Lesser Stamina",[130,150,160,170],{soul_dust:2},{kind:"ench",slot:"Bracer",wear:["hunter","warrior","priest"]});
+rec("ench_bracer_lesser_strength","enchanting","Enchant Bracer – Lesser Strength",[140,160,170,180],{soul_dust:2,lesser_astral_essence:1},{kind:"ench",slot:"Bracer",wear:["warrior"]});
+rec("minor_mana_oil","enchanting","Minor Mana Oil",[150,170,180,190],{soul_dust:3,maple_seed:2,leaded_vial:1},{kind:"oil",wear:["priest"]});
+rec("runed_golden_rod","enchanting","Runed Golden Rod",[150,155,165,175],{golden_rod:1,iridescent_pearl:1,greater_astral_essence:2,soul_dust:2},{kind:"rod"});
+rec("lesser_mystic_wand","enchanting","Lesser Mystic Wand",[155,175,185,195],{star_wood:1,lesser_mystic_essence:1,vision_dust:1},{kind:"wand",ilvl:30,slot:"Wand",wear:["priest"]});
+rec("ench_bracer_stamina","enchanting","Enchant Bracer – Stamina",[170,190,200,210],{vision_dust:3},{kind:"ench",slot:"Bracer",wear:["hunter","warrior","priest"]});
+rec("greater_mystic_wand","enchanting","Greater Mystic Wand",[175,195,205,215],{star_wood:1,greater_mystic_essence:1,vision_dust:1},{kind:"wand",ilvl:37,slot:"Wand",wear:["priest"]});
+rec("ench_bracer_spirit","enchanting","Enchant Bracer – Spirit",[180,200,210,220],{lesser_mystic_essence:1},{kind:"ench",slot:"Bracer",wear:["priest"]});
+rec("lesser_wizard_oil","enchanting","Lesser Wizard Oil",[200,220,230,240],{vision_dust:3,stranglethorn_seed:2,leaded_vial:1},{kind:"oil",wear:["priest"]});
+rec("runed_truesilver_rod","enchanting","Runed Truesilver Rod",[200,205,210,220],{truesilver_rod:1,black_pearl:1,greater_mystic_essence:2,vision_dust:2},{kind:"rod"});
+rec("ench_bracer_strength","enchanting","Enchant Bracer – Strength",[200,220,230,240],{vision_dust:1},{kind:"ench",slot:"Bracer",wear:["warrior"]});
+rec("ench_bracer_greater_strength","enchanting","Enchant Bracer – Greater Strength",[235,255,265,275],{dream_dust:2,greater_nether_essence:1},{kind:"ench",slot:"Bracer",wear:["warrior"]});
+rec("ench_bracer_greater_stamina","enchanting","Enchant Bracer – Greater Stamina",[245,265,275,285],{dream_dust:5},{kind:"ench",slot:"Bracer",wear:["hunter","warrior","priest"]});
+rec("enchanted_thorium_bar","enchanting","Enchanted Thorium Bar",[250,255,260,270],{thorium_bar:1,dream_dust:3,greater_nether_essence:1},{out:{id:"enchanted_thorium_bar",q:1},kind:"bar",wear:["warrior"]});
+rec("lesser_mana_oil","enchanting","Lesser Mana Oil",[250,265,275,285],{dream_dust:3,purple_lotus:2,crystal_vial:1},{kind:"oil",wear:["priest"]});
+rec("wizard_oil","enchanting","Wizard Oil",[275,285,295,305],{illusion_dust:3,firebloom:1,crystal_vial:1},{kind:"oil",wear:["priest"]});
+rec("ench_bracer_greater_intellect","enchanting","Enchant Bracer – Greater Intellect",[275,285,295,305],{lesser_eternal_essence:3},{kind:"ench",slot:"Bracer",wear:["priest"]});
+rec("runed_arcanite_rod","enchanting","Runed Arcanite Rod",[290,295,300,305],{arcanite_rod:1,golden_pearl:1,illusion_dust:10,greater_eternal_essence:4,small_brilliant_shard:2,large_brilliant_shard:4},{kind:"rod"});
+rec("ench_bracer_superior_strength","enchanting","Enchant Bracer – Superior Strength",[295,300,305,310],{illusion_dust:6,greater_eternal_essence:6},{kind:"ench",slot:"Bracer",wear:["warrior"]});
+// ---------- STATE ----------
+const DEFAULT_STATE = { skills:{mining:1,skinning:1,blacksmithing:1,engineering:1,tailoring:1,enchanting:1}, levels:{hunter:1,warrior:1,priest:1}, prices:{}, have:{} };
+let S = JSON.parse(JSON.stringify(DEFAULT_STATE));
+let OVERRIDES = {};     // recipe id -> recipe object or {deleted:true}
+let CUSTOM_MATS = {};   // material id -> material
+function recipes(){ const out=[]; const seen=new Set();
+  for(const r of R){ seen.add(r.id); const o=OVERRIDES[r.id]; if(o){ if(!o.deleted) out.push(o); } else out.push(r); }
+  for(const id in OVERRIDES){ if(!seen.has(id) && !OVERRIDES[id].deleted) out.push(OVERRIDES[id]); }
+  return out; }
+function allMats(){ return Object.assign({}, M, CUSTOM_MATS); }
+function matName(id){ const m=allMats()[id]; if(m) return m.n; const r=recipes().find(x=>x.id===id); return r? r.n : id; }
+const byOut = ()=>{ const map={}; for(const r of recipes()){ (map[r.out.id] ||= []).push(r);} return map; };
+
+// ---------- MONEY ----------
+const fmtMoney = c => { if(c==null||!isFinite(c)) return "—"; const neg=c<0; c=Math.round(Math.abs(c)); const g=Math.floor(c/10000), s=Math.floor(c%10000/100), cp=c%100;
+  let t = g? `${g}g ${s}s` : s? `${s}s ${cp}c` : `${cp}c`; return (neg?"−":"")+t; };
+const silverToCopper = s => Math.round(parseFloat(s)*100);
+// AH price (copper) the user typed, or null
+function ahPrice(id){ const v=S.prices[id]; return (v==null||v==="")? null : silverToCopper(v); }
+// Value if you SELL one: AH price, else vendor sell price
+function sellValue(id){ const ah=ahPrice(id); if(ah!=null) return ah*0.95; const m=allMats()[id]; return m&&m.vendor!=null? m.vendor : null; }
+// Cost to ACQUIRE one, with the source that gives it. Mats the team gathers cost the AH price (opportunity cost) unless no AH price exists, then vendor sell price.
+const costMemo = new Map();
+function acquire(id, depth=0){
+  if(costMemo.has(id)) return costMemo.get(id);
+  const m=allMats()[id]; let best=null;
+  const ah=ahPrice(id); if(ah!=null) best={cost:ah,src:"AH"};
+  if(m&&m.buy!=null && (!best||m.buy<best.cost)) best={cost:m.buy,src:"vendor"};
+  if(depth<6){ for(const r of (byOut()[id]||[])){ const sk=S.skills[r.prof]; if(sk==null||sk<r.sk[0]) continue;
+      let c=0, ok=true; for(const [rid,q] of Object.entries(r.re)){ const a=acquire(rid,depth+1); if(!a){ok=false;break;} c+=a.cost*q; }
+      if(!ok) continue; c=c/r.out.q; if(!best||c<best.cost) best={cost:c,src:"craft:"+r.prof,via:r}; } }
+  if(!best && m && m.vendor!=null && (m.prof||m.src)) best={cost:m.vendor,src:"no price (vendor value)"};
+  costMemo.set(id,best); return best;
+}
+function recipeCost(r){ let c=0, missing=[]; for(const [id,q] of Object.entries(r.re)){ const a=acquire(id); if(!a){missing.push(id);continue;} c+=a.cost*q; } return {cost:c,missing}; }
+// Expected disenchant value of one crafted item
+function deRow(ilvl){ return DE.find(d=>ilvl>=d[0]&&ilvl<=d[1]); }
+function deValue(r){ if(!r.ilvl||!["gear","weapon","ranged","wand"].includes(r.kind)) return null; const d=deRow(r.ilvl); if(!d) return null;
+  const weapon = r.kind!=="gear"; const pDust=weapon?0.2:0.75, pEss=weapon?0.75:0.2, pShard=0.05;
+  const v = id => sellValue(id) ?? 0;
+  return {value: pDust*2.5*v(d[2]) + pEss*1.5*v(d[3]) + pShard*v(d[4]), dust:d[2], ess:d[3], shard:d[4]}; }
+// What one craft is worth when you're done with it: best of AH sale, vendor, disenchant
+function outputValue(r){ const direct = sellValue(r.out.id); const de=deValue(r); const dv=de?de.value:null; let best=direct||0, how=direct? (ahPrice(r.out.id)!=null?"sell on AH":"vendor") : "no price";
+  if(dv!=null && dv>best){best=dv; how="disenchant";} if(r.kind==="ench") {best=0;how="used on gear";} return {value:best*r.out.q, how}; }
+// Difficulty & skill-up chance (Classic formula)
+function diff(r, sk){ sk = sk ?? S.skills[r.prof]; if(sk<r.sk[0]) return "locked"; if(sk<r.sk[1]) return "orange"; if(sk<r.sk[2]) return "yellow"; if(sk<r.sk[3]) return "green"; return "grey"; }
+function chance(r, sk){ sk = sk ?? S.skills[r.prof]; const d=diff(r,sk); if(d==="locked"||d==="grey") return 0; if(d==="orange") return 1; return Math.max(0.05, Math.min(1,(r.sk[3]-sk)/(r.sk[3]-r.sk[1]))); }
+function rank(sk){ for(const [lo,n,hi] of RANKS) if(sk<hi) return {n,cap:hi}; return {n:"Artisan",cap:300}; }
+function tierAt(prof, sk){ const t=TIERS[prof].find(b=>sk>=b[0]&&sk<b[1]) || TIERS[prof][TIERS[prof].length-1]; return t; }
+// Expand a recipe to RAW materials (things nobody on the team crafts), at current skills
+function rawMats(r, mult=1, acc={}, depth=0){ for(const [id,q] of Object.entries(r.re)){ const sub=(byOut()[id]||[]).find(x=>S.skills[x.prof]>=x.sk[0]);
+    if(sub && depth<6) rawMats(sub, mult*q/sub.out.q, acc, depth+1); else acc[id]=(acc[id]||0)+q*mult; } return acc; }
+// Plan for a profession: recipes available now, with cost per expected skill point
+function planFor(prof){ costMemo.clear(); const sk=S.skills[prof]; const rows=[];
+  for(const r of recipes().filter(r=>r.prof===prof)){ const d=diff(r,sk); if(d==="locked"||d==="grey") continue; const ch=chance(r,sk); const {cost,missing}=recipeCost(r); const ov=outputValue(r);
+    rows.push({r,d,ch,cost,missing,ov,net:cost-ov.value,perPoint:(cost-ov.value)/ch}); }
+  rows.sort((a,b)=>a.perPoint-b.perPoint); return rows; }
+// Next unlock: cheapest recipe that is locked but within 25 points
+function nextUnlocks(prof){ const sk=S.skills[prof]; return recipes().filter(r=>r.prof===prof&&r.sk[0]>sk&&r.sk[0]<=sk+25).sort((a,b)=>a.sk[0]-b.sk[0]); }
+function skinMax(sk){ if(sk<=100) return Math.floor(sk/5); return Math.floor((sk+100)/10); }
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+const CH = {orange:"d-orange",yellow:"d-yellow",green:"d-green",grey:"d-grey",locked:"d-locked"};
+function chip(d){ return `<span class="chip ${CH[d]}">${d}</span>`; }
+function profSpan(p){ return `<span class="prof prof-${p}">${PROFS[p].name}</span>`; }
+function reagentList(r){ return Object.entries(r.re).map(([id,q])=>{ const have=S.have[id]||0; const cls=have>=q?"good":""; return `<b class="${cls}">${q}× ${escapeHtml(matName(id))}</b>`; }).join(", "); }
+// ---------- RENDER: MAP ----------
+let hiProf = null;
+function renderSkillInputs(){
+  const el=document.getElementById("skillInputs"); el.innerHTML="";
+  for(const c of Object.keys(CHARS)){ const h=document.createElement("div"); h.className="small muted"; h.style.marginTop=".5rem"; h.textContent=CHARS[c].name; el.appendChild(h);
+    for(const p of CHARS[c].profs){ const sk=S.skills[p]; const rk=rank(sk); const d=document.createElement("div"); d.className="skillbox"; d.style.marginBottom=".3rem";
+      d.innerHTML=`<div><span class="name prof-${p}">${PROFS[p].name}</span> <span class="tier">${rk.n} · ${escapeHtml(tierAt(p,sk)[2])}</span><div class="bar"><i style="width:${sk/3}%"></i></div></div>
+        <input type="number" id="skill-${p}" min="1" max="300" value="${sk}" aria-label="${PROFS[p].name} skill">`;
+      el.appendChild(d); d.querySelector("input").addEventListener("change",e=>{ S.skills[p]=Math.max(1,Math.min(300,parseInt(e.target.value)||1)); save(); renderAll(); }); } }
+  const lv=document.getElementById("levelInputs"); lv.innerHTML="";
+  for(const c of Object.keys(CHARS)){ const d=document.createElement("div"); d.className="skillbox"; d.style.marginBottom=".3rem";
+    d.innerHTML=`<span>${CHARS[c].name}</span><input type="number" id="level-${c}" min="1" max="60" value="${S.levels[c]}" aria-label="${CHARS[c].name} level">`; lv.appendChild(d);
+    d.querySelector("input").addEventListener("change",e=>{ S.levels[c]=Math.max(1,Math.min(60,parseInt(e.target.value)||1)); save(); renderAll(); }); }
+}
+// Edges in the flow diagram: [from, to, label, test(): true when this flow is live at current skills]
+function flowEdges(){ const s=S.skills; const t=(p,lo)=>s[p]>=lo;
+  return [
+    ["mining","blacksmithing","bars, stone → armor, rods", ()=>true],
+    ["mining","engineering","bars, stone, gems → parts, guns", ()=>true],
+    ["skinning","engineering","leather → frameworks", ()=>t("engineering",105)],
+    ["skinning","tailoring","leather → boots, bags, gloves", ()=>t("tailoring",95)],
+    ["blacksmithing","enchanting","rods · greens to disenchant", ()=>true],
+    ["blacksmithing","hunter","mail gear (40+) · spurs", ()=>S.levels.hunter>=40||t("blacksmithing",215)],
+    ["engineering","hunter","guns · scopes · ammo", ()=>t("engineering",50)],
+    ["tailoring","enchanting","greens to disenchant", ()=>true],
+    ["enchanting","blacksmithing","enchanted thorium bars", ()=>t("enchanting",250)],
+    ["enchanting","warrior","bracer / weapon enchants", ()=>true],
+    ["tailoring","hunter","bags · cloaks", ()=>t("tailoring",45)],
+    ["cloth","tailoring","cloth drops (everyone loots)", ()=>true],
+    ["cloth","engineering","linen, wool, mageweave, runecloth", ()=>true],
+    ["cloth","blacksmithing","cloth in weapons & gauntlets", ()=>true],
+  ]; }
+function renderFlow(){
+  const W=760,H=420; const pos={
+    hunter:{x:30,y:30,w:200,h:150}, warrior:{x:280,y:30,w:200,h:150}, priest:{x:530,y:30,w:200,h:150},
+    mining:{x:45,y:60,w:170,h:50}, skinning:{x:45,y:120,w:170,h:50},
+    blacksmithing:{x:295,y:60,w:170,h:50}, engineering:{x:295,y:120,w:170,h:50},
+    tailoring:{x:545,y:60,w:170,h:50}, enchanting:{x:545,y:120,w:170,h:50},
+    cloth:{x:295,y:230,w:170,h:44},
+    hunterGear:{x:45,y:330,w:170,h:60}, warriorGear:{x:295,y:330,w:170,h:60}, priestGear:{x:545,y:330,w:170,h:60} };
+  const c=(k)=>{const p=pos[k];return {x:p.x+p.w/2,y:p.y+p.h/2,l:p.x,r:p.x+p.w,t:p.y,b:p.y+p.h};};
+  let svg=`<svg class="flow" viewBox="0 0 ${W} ${H}" role="img" aria-label="Material flow between the three characters">`;
+  svg+=`<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker></defs>`;
+  for(const ch of Object.keys(CHARS)){ const p=pos[ch]; svg+=`<rect class="charbox" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="8"/><text class="char" x="${p.x+10}" y="${p.y+20}">${CHARS[ch].name.toUpperCase()} <tspan class="s" style="font-family:var(--font-mono);font-weight:400;font-size:11px">lvl ${S.levels[ch]}</tspan></text>`; }
+  // edges
+  const edgeTarget={hunter:"hunterGear",warrior:"warriorGear",priest:"priestGear"};
+  for(const [f,to,label,live] of flowEdges()){ const A=c(f), B=c(edgeTarget[to]||to); const isLive=live(); const hi = hiProf && (f===hiProf||to===hiProf||edgeTarget[to]===hiProf);
+    let d; let lx,ly;
+    if(f==="cloth"){ d=`M${A.x},${A.t} C${A.x},${A.t-40} ${B.x},${B.b+60} ${B.x},${B.b}`; lx=(A.x+B.x)/2; ly=(A.t+B.b)/2+4; if(to==="tailoring"){ d=`M${A.r},${A.y} C${A.r+60},${A.y} ${B.x},${B.b+50} ${B.x},${B.b}`; lx=(A.r+B.x)/2+10; ly=A.y+6;} if(to==="blacksmithing"){ d=`M${A.x-40},${A.t} C${A.x-40},${A.t-40} ${B.x-40},${B.b+40} ${B.x-40},${B.b}`; lx=B.x-110; ly=B.b+34;} }
+    else if(edgeTarget[to]){ const sx = f===to? A.x : (A.x<B.x? A.x+40 : A.x-40); d=`M${A.x},${A.b} C${A.x},${A.b+90} ${B.x},${B.t-90} ${B.x},${B.t}`; if(f==="blacksmithing"&&to==="hunter"){ d=`M${A.l},${A.y+10} C${A.l-80},${A.y+60} ${B.x+60},${B.t-80} ${B.x+60},${B.t}`; lx=B.x+70; ly=B.t-36; } else if(f==="engineering"&&to==="hunter"){ d=`M${A.l},${A.y+16} C${A.l-60},${A.y+90} ${B.x},${B.t-60} ${B.x},${B.t}`; lx=B.x-70; ly=B.t-40; } else if(f==="tailoring"&&to==="hunter"){ d=`M${A.x-30},${A.b} C${A.x-30},${A.b+180} ${B.x-40},${B.t-30} ${B.x-40},${B.t}`; lx=B.x+20; ly=B.t-12; } else if(f==="enchanting"&&to==="warrior"){ d=`M${A.l},${A.y+14} C${A.l-40},${A.y+110} ${B.x+50},${B.t-60} ${B.x+50},${B.t}`; lx=B.x+60; ly=B.t-30; } else { lx=A.x+8; ly=(A.b+B.t)/2; } }
+    else if(A.x<B.x){ const sameRow=Math.abs(A.y-B.y)<5; d=`M${A.r},${A.y} C${A.r+40},${A.y} ${B.l-40},${B.y} ${B.l},${B.y}`; lx=(A.r+B.l)/2; ly=sameRow? A.y-6 : (A.y+B.y)/2-4; if(f==="skinning"&&to==="tailoring"){ d=`M${A.r},${A.b-8} C${A.r+120},${A.b+70} ${B.l-120},${B.b+70} ${B.l},${B.b-8}`; lx=(A.r+B.l)/2; ly=A.b+40; } if(f==="mining"&&to==="engineering"){ ly=B.y-18; lx=A.r+45; } if(f==="skinning"&&to==="engineering"){ ly=B.y+14; lx=A.r+45;} if(f==="blacksmithing"&&to==="enchanting"){ ly=B.y-4; lx=A.r+45;} if(f==="tailoring"&&to==="enchanting"){ d=`M${A.x},${A.b} L${B.x},${B.t}`; lx=A.x+6; ly=(A.b+B.t)/2+3; } }
+    else { d=`M${A.l},${A.b-6} C${A.l-40},${A.b+60} ${B.r+40},${B.b+60} ${B.r},${B.b-6}`; lx=(A.l+B.r)/2; ly=A.b+52; }
+    svg+=`<path class="edge ${isLive&&(hi||!hiProf)?"hi":""}" d="${d}" marker-end="url(#arr)" style="${hiProf&&!hi?'opacity:.18':''}"/>`;
+    svg+=`<text class="edgelabel" x="${lx}" y="${ly}" text-anchor="middle" style="${hiProf&&!hi?'opacity:.2':''}">${escapeHtml(label)}</text>`; }
+  for(const p of Object.keys(PROFS)){ const b=pos[p]; const sk=S.skills[p]; const hi=hiProf===p;
+    svg+=`<g class="node ${hi?"hi":""}" data-prof="${p}" style="cursor:pointer"><rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="5"/><rect x="${b.x}" y="${b.y+b.h-4}" width="${b.w*sk/300}" height="4" rx="2" style="fill:var(--p-${p==="blacksmithing"?"bs":p==="engineering"?"eng":p==="tailoring"?"tailor":p==="enchanting"?"ench":p})"/>
+      <text class="t" x="${b.x+10}" y="${b.y+20}" style="fill:var(--p-${p==="blacksmithing"?"bs":p==="engineering"?"eng":p==="tailoring"?"tailor":p==="enchanting"?"ench":p})">${PROFS[p].name}</text><text class="s" x="${b.x+10}" y="${b.y+37}">${sk} · ${escapeHtml(tierAt(p,sk)[2])}</text></g>`; }
+  const cb=pos.cloth; svg+=`<g class="node"><rect x="${cb.x}" y="${cb.y}" width="${cb.w}" height="${cb.h}" rx="5" style="stroke-dasharray:3 3"/><text class="t" x="${cb.x+10}" y="${cb.y+18}">Cloth drops</text><text class="s" x="${cb.x+10}" y="${cb.y+34}">all three loot it</text></g>`;
+  const gearText={hunterGear:["Hunter wears","leather → mail @40 · gun/bow"],warriorGear:["Warrior wears","mail → plate @40 · axe · shield"],priestGear:["Priest wears","cloth · wand · enchants"]};
+  for(const k of Object.keys(gearText)){ const b=pos[k]; svg+=`<g class="node"><rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="5" style="stroke-dasharray:3 3"/><text class="t" x="${b.x+10}" y="${b.y+22}">${gearText[k][0]}</text><text class="s" x="${b.x+10}" y="${b.y+42}" style="font-family:var(--font-body)">${gearText[k][1]}</text></g>`; }
+  svg+=`</svg>`;
+  const el=document.getElementById("flow"); el.innerHTML=svg;
+  el.querySelectorAll("g.node[data-prof]").forEach(g=>g.addEventListener("click",()=>{ hiProf = hiProf===g.dataset.prof? null : g.dataset.prof; renderFlow(); renderMapAlerts(); }));
+}
+function renderMapAlerts(){
+  const s=S.skills; const out=[];
+  const gap=(crafter, gatherer, mats)=>{ const need=tierAt(crafter,s[crafter]); const needSkill=Math.max(...mats.map(id=>allMats()[id]?.skill||1)); if(s[gatherer]<needSkill) out.push(`<div class="alert">${profSpan(crafter)} is in its <b>${escapeHtml(need[2])}</b> tier but ${profSpan(gatherer)} (${s[gatherer]}) can't gather it yet (needs ${needSkill}). Either push ${PROFS[gatherer].name} first on the lower tier, or buy ${mats.map(matName).join(" / ")} on the AH.</div>`); };
+  const bsTier=tierAt("blacksmithing",s.blacksmithing); const bsMats=recipes().filter(r=>r.prof==="blacksmithing"&&diff(r)!=="locked"&&diff(r)!=="grey").flatMap(r=>Object.keys(rawMats(r))).filter(id=>allMats()[id]?.prof==="mining");
+  if(bsMats.length) gap("blacksmithing","mining",[...new Set(bsMats)].sort((a,b)=>(allMats()[b].skill||0)-(allMats()[a].skill||0)).slice(0,2));
+  const engMats=recipes().filter(r=>r.prof==="engineering"&&diff(r)!=="locked"&&diff(r)!=="grey").flatMap(r=>Object.keys(rawMats(r))).filter(id=>allMats()[id]?.prof==="mining");
+  if(engMats.length) gap("engineering","mining",[...new Set(engMats)].sort((a,b)=>(allMats()[b].skill||0)-(allMats()[a].skill||0)).slice(0,2));
+  // Enchanting is fed by disenchanting: compare its dust tier with what BS/Tailoring produce
+  const eT=TIERS.enchanting.findIndex(b=>s.enchanting>=b[0]&&s.enchanting<b[1]); const needIlvl=[[5,20],[21,30],[31,40],[41,50],[51,65]][Math.max(0,eT)];
+  const feeders=recipes().filter(r=>r.ilvl&&["gear","weapon"].includes(r.kind)&&r.ilvl>=needIlvl[0]&&r.ilvl<=needIlvl[1]&&diff(r)!=="locked");
+  if(feeders.length){ const cheap=feeders.map(r=>({r,c:recipeCost(r).cost})).sort((a,b)=>a.c-b.c)[0]; out.push(`<div class="alert good">${profSpan("enchanting")} wants <b>${escapeHtml(tierAt("enchanting",s.enchanting)[2])}</b> (from ilvl ${needIlvl[0]}–${needIlvl[1]} greens). Cheapest feeder the team can craft: <b>${escapeHtml(cheap.r.n)}</b> (${profSpan(cheap.r.prof)}, ${chip(diff(cheap.r))}) at ~${fmtMoney(cheap.c)} each. Craft it, mail to the Priest, disenchant.</div>`); }
+  else out.push(`<div class="alert">${profSpan("enchanting")} wants <b>${escapeHtml(tierAt("enchanting",s.enchanting)[2])}</b> but no team recipe currently produces ilvl ${needIlvl[0]}–${needIlvl[1]} greens. Buy cheap greens on the AH to disenchant, or level the Warrior's/Priest's crafting into that range.</div>`);
+  // Rods
+  const rods=[["runed_silver_rod","silver_rod"],["runed_golden_rod","golden_rod"],["runed_truesilver_rod","truesilver_rod"],["runed_arcanite_rod","arcanite_rod"]];
+  for(const [er,br] of rods){ const e=recipes().find(r=>r.id===er), b=recipes().find(r=>r.id===br); if(!e||!b) continue; if(s.enchanting>=e.sk[0]-10 && s.enchanting<e.sk[0]+15){ const can=s.blacksmithing>=b.sk[0]; out.push(`<div class="alert ${can?"good":"bad"}">${profSpan("enchanting")} needs a <b>${escapeHtml(b.n)}</b> around skill ${e.sk[0]}. ${can? `The Warrior can make it now (${PROFS.blacksmithing.name} ${s.blacksmithing} ≥ ${b.sk[0]}).` : `The Warrior needs ${PROFS.blacksmithing.name} ${b.sk[0]} (has ${s.blacksmithing}). Push Blacksmithing or buy the rod.`}</div>`); } }
+  // Armor transitions
+  if(S.levels.hunter>=36&&S.levels.hunter<42) out.push(`<div class="alert info">Hunter hits <b>Mail</b> at level 40. From then on the Warrior's Blacksmithing mail recipes (Green Iron Leggings/Bracers, Mithril Scale Pants, Mithril Coif) are Hunter gear too. Stop asking leatherworkers.</div>`);
+  if(S.levels.warrior>=36&&S.levels.warrior<42) out.push(`<div class="alert info">Warrior hits <b>Plate</b> at level 40. Mail pieces made before then can go to the Hunter at 40 instead of being disenchanted.</div>`);
+  if(S.levels.hunter>=10) out.push(`<div class="alert info">Hunters can use <b>guns</b> (train Guns from a weapon master). The Warrior's Engineering makes guns, scopes and ammo for the Hunter at every tier, so bows are not the only option.</div>`);
+  out.push(`<div class="alert info">Vanilla Blacksmithing makes no <b>shields</b>, only shield spikes. Shields come from quests, dungeons and the AH.</div>`);
+  document.getElementById("mapAlerts").innerHTML=out.join("");
+}
+// ---------- RENDER: PLAN ----------
+function renderPlan(){
+  const el=document.getElementById("planBoards"); el.innerHTML="";
+  for(const p of ["blacksmithing","engineering","tailoring","enchanting","mining"]){ const rows=planFor(p).slice(0,6); const sk=S.skills[p]; const rk=rank(sk);
+    const trainer = sk>=rk.cap-10 && rk.cap<300 ? `<div class="alert">${rk.n} caps at ${rk.cap}. Visit the next trainer (${RANKS.find(x=>x[0]===rk.cap)?.[1]}) before you waste mats on grey crafts.</div>`:"";
+    let html=`<div class="card"><h2>${profSpan(p)} <span class="num muted">${sk}</span></h2>${trainer}`;
+    if(!rows.length) html+=`<p class="muted small">No recipe in the list gives skill at ${sk}. Add the one you're using under Recipes.</p>`;
+    else html+=`<div class="tablewrap"><table><thead><tr><th>Craft</th><th></th><th class="r">Skill-up odds</th><th class="r">Net cost / point</th></tr></thead><tbody>`+rows.map(x=>`<tr><td><b>${escapeHtml(x.r.n)}</b><div class="reagents">${reagentList(x.r)}${x.missing.length?` <span class="bad">· no price for ${x.missing.map(matName).join(", ")}</span>`:""}</div><div class="small muted">result: ${escapeHtml(x.ov.how)} ${x.ov.value?`(${fmtMoney(x.ov.value)})`:""}</div></td><td>${chip(x.d)}</td><td class="r num">${Math.round(x.ch*100)}%</td><td class="r num">${fmtMoney(x.perPoint)}</td></tr>`).join("")+`</tbody></table></div>`;
+    const nu=nextUnlocks(p).slice(0,3); if(nu.length) html+=`<p class="small muted" style="margin-top:.5rem">Soon: ${nu.map(r=>`${escapeHtml(r.n)} @${r.sk[0]}`).join(" · ")}</p>`;
+    html+=`</div>`; el.insertAdjacentHTML("beforeend",html); }
+  // Farm list: union of raw mats for the top 3 recipes per crafting profession, ×5 crafts each
+  const need={}; for(const p of ["blacksmithing","engineering","tailoring","enchanting"]){ for(const x of planFor(p).slice(0,3)){ const raw=rawMats(x.r,5); for(const id in raw) need[id]=(need[id]||0)+raw[id]; } }
+  const rows=Object.entries(need).map(([id,q])=>{ const m=allMats()[id]||{}; const have=S.have[id]||0; const short=Math.max(0,Math.ceil(q)-have); let how;
+      if(m.prof==="mining"||m.prof==="skinning"){ how = S.skills[m.prof]>=(m.skill||1)? `<span class="good">Farm</span> (${PROFS[m.prof].short} ${m.skill})` : `<span class="warn">Buy</span> — ${PROFS[m.prof].short} ${S.skills[m.prof]} &lt; ${m.skill}`; }
+      else if(m.prof==="enchanting") how=`<span class="good">Disenchant</span>`; else if(m.buy!=null) how=`Vendor ${fmtMoney(m.buy)}`; else if(m.src) how=`<span class="warn">${escapeHtml(m.src)}</span>`; else how="AH";
+      const a=acquire(id); return {id,q,have,short,how,cost:a?a.cost*short:null}; }).sort((a,b)=>(b.cost||0)-(a.cost||0));
+  document.getElementById("farmList").innerHTML = rows.length? `<div class="tablewrap"><table><thead><tr><th>Material</th><th class="r">Need (≈15 crafts)</th><th class="r">Have</th><th class="r">Short</th><th>Source</th><th class="r">Cost to buy the gap</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${escapeHtml(matName(x.id))}</td><td class="r num">${Math.ceil(x.q)}</td><td class="r num">${x.have}</td><td class="r num ${x.short?"warn":"good"}">${x.short}</td><td>${x.how}</td><td class="r num">${fmtMoney(x.cost)}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted small">Nothing to gather yet.</p>`;
+}
+// ---------- RENDER: LADDER ----------
+function renderLadder(){
+  const el=document.getElementById("ladders"); let html="";
+  for(const c of Object.keys(CHARS)){ html+=`<h3 style="margin:.75rem 0 .4rem">${CHARS[c].name}</h3>`;
+    for(const p of CHARS[c].profs){ const sk=S.skills[p]; html+=`<div class="ladder"><div><span class="prof prof-${p}">${PROFS[p].name}</span> <span class="num muted">${sk}</span></div><div class="track">`;
+      for(const [lo,hi,label] of TIERS[p]){ const here=sk>=lo&&sk<hi; html+=`<div class="band" style="flex:${hi-lo} 0 0;background:${here?"var(--surface-2)":"var(--surface)"};font-weight:${here?700:400}" title="${lo}–${hi}">${escapeHtml(label)}</div>`; }
+      html+=`<div class="marker" style="left:${(sk-1)/299*100}%"></div></div></div>`; } }
+  html+=`<div class="ladder"><div></div><div class="axis"><span>1</span><span>75</span><span>150</span><span>225</span><span>300</span></div></div>`;
+  el.innerHTML=html;
+  document.getElementById("skinSkill").textContent=S.skills.skinning; document.getElementById("skinMaxLevel").textContent=skinMax(S.skills.skinning);
+  document.getElementById("deTable").innerHTML=`<table><thead><tr><th>Item level</th><th>Dust (armor ~75%)</th><th>Essence (weapons ~75%)</th><th>Shard (~5%, blues)</th><th>Team crafts in this band</th></tr></thead><tbody>${DE.map(d=>{ const f=recipes().filter(r=>r.ilvl>=d[0]&&r.ilvl<=d[1]&&["gear","weapon","ranged","wand"].includes(r.kind)); return `<tr><td class="num">${d[0]}–${d[1]}</td><td>${matName(d[2])}</td><td>${matName(d[3])}</td><td>${matName(d[4])}</td><td class="small">${f.map(r=>`<span class="${CH[diff(r)]}">${escapeHtml(r.n)}</span>`).join(", ")||"—"}</td></tr>`; }).join("")}</tbody></table>`;
+}
+// ---------- RENDER: STACK CHECK ----------
+function renderMatPick(){ const sel=document.getElementById("matPick"); const cur=sel.value; const mats=Object.values(allMats()).sort((a,b)=>a.n.localeCompare(b.n)); sel.innerHTML=mats.map(m=>`<option value="${m.id}">${escapeHtml(m.n)}</option>`).join(""); sel.value = cur && allMats()[cur]? cur : "copper_ore"; }
+function renderMat(){
+  costMemo.clear(); const id=document.getElementById("matPick").value; const qty=Math.max(1,parseInt(document.getElementById("matQty").value)||1); const m=allMats()[id]||{}; 
+  // direct consumers, plus consumers of what this smelts/crafts into (one hop)
+  const direct=recipes().filter(r=>r.re[id]);
+  const rows=[];
+  for(const r of recipes()){ if(!r.re[id]) continue; const d=diff(r); const per=r.re[id]; const crafts=Math.floor(qty/per); const ch=chance(r); const {cost}=recipeCost(r); const ov=outputValue(r);
+    rows.push({r,d,per,crafts,pts:crafts*ch,cost:cost*crafts,val:ov.value*crafts,how:ov.how,hop:null}); }
+  // one hop through intermediates (e.g. ore -> bar -> armor)
+  for(const mid of recipes().filter(r=>r.re[id]&&allMats()[r.out.id]&&r.out.id!==id)){ const perUnit=mid.re[id]/mid.out.q; if(diff(mid)==="locked") continue;
+    for(const r of recipes()){ if(!r.re[mid.out.id]) continue; const d=diff(r); const per=r.re[mid.out.id]*perUnit; const crafts=Math.floor(qty/per); if(!crafts) continue; const ch=chance(r); const {cost}=recipeCost(r); const ov=outputValue(r);
+      rows.push({r,d,per,crafts,pts:crafts*ch,cost:cost*crafts,val:ov.value*crafts,how:ov.how,hop:mid}); } }
+  const live=rows.filter(x=>x.d!=="locked"); live.sort((a,b)=>(b.pts-a.pts)||(a.cost-b.cost));
+  const sell=sellValue(id); const sellTotal=sell!=null? sell*qty : null; const ah=ahPrice(id);
+  const best=live.find(x=>x.pts>0);
+  let verdict=""; 
+  if(best){ const lvl=best.pts; verdict+=`<div class="alert good"><b>Use it.</b> ${qty}× ${escapeHtml(m.n||id)} → ${best.crafts}× <b>${escapeHtml(best.r.n)}</b> ${best.hop?`(via ${escapeHtml(best.hop.n)}) `:""}for ${profSpan(best.r.prof)} ${chip(best.d)}: about <b class="num">${lvl.toFixed(1)}</b> skill points. ${best.val?`The results ${best.how} for ~${fmtMoney(best.val)}.`:""}</div>`; }
+  else if(live.length) verdict+=`<div class="alert">Every team recipe that uses this is <b>grey</b> right now. Crafting gives no skill; only do it for the item itself.</div>`;
+  else verdict+=`<div class="alert">Nobody on the team can use this yet. ${rows.length?`First unlock: ${escapeHtml(rows.sort((a,b)=>a.r.sk[0]-b.r.sk[0])[0].r.n)} at ${PROFS[rows[0].r.prof].name} ${rows[0].r.sk[0]}.`:"No recipe in the list uses it."}</div>`;
+  if(sellTotal!=null) verdict+=`<div class="alert info"><b>Or sell:</b> ${qty}× at ${ah!=null?`AH ${fmtMoney(ah)} each (after 5% cut)`:`vendor ${fmtMoney(sell)} each`} ≈ <b class="num">${fmtMoney(sellTotal)}</b>.${ah==null?` <span class="muted">Set an AH price under Prices for a real comparison.</span>`:""}</div>`;
+  if(best && sellTotal!=null && best.pts>0){ const perPoint=(sellTotal + Math.max(0,best.cost - (acquire(id)?.cost||0)*qty) - best.val)/best.pts; verdict+=`<div class="small muted">Using it instead of selling costs about <b class="num">${fmtMoney(perPoint)}</b> per skill point once you count the lost sale${best.val?" and the value of what you make":""}. Under ~1g a point in the first 150 skill is cheap; past 225, 5–20g a point is normal.</div>`; }
+  if(m.prof==="mining"&&m.src==="node"){ const bar=recipes().find(r=>r.re[id]&&r.kind==="bar"); if(bar) verdict+=`<div class="small muted" style="margin-top:.4rem">Smelting ${qty} also gives ${profSpan("mining")} ${(chance(bar)*qty).toFixed(0)} points ${chip(diff(bar))}.</div>`; }
+  document.getElementById("matVerdict").innerHTML=verdict;
+  document.getElementById("matUses").innerHTML = rows.length? `<div class="tablewrap"><table><thead><tr><th>Recipe</th><th></th><th class="r">Uses / craft</th><th class="r">Crafts from ${qty}</th><th class="r">≈ skill pts</th><th>Then</th></tr></thead><tbody>${rows.sort((a,b)=>(a.d==="locked")-(b.d==="locked")||b.pts-a.pts).map(x=>`<tr><td>${profSpan(x.r.prof)} <b>${escapeHtml(x.r.n)}</b>${x.hop?`<div class="small muted">via ${escapeHtml(x.hop.n)}</div>`:""}<div class="reagents">${reagentList(x.r)}</div></td><td>${chip(x.d)}${x.d==="locked"?`<div class="small muted">@${x.r.sk[0]}</div>`:""}</td><td class="r num">${+x.per.toFixed(2)}</td><td class="r num">${x.crafts}</td><td class="r num">${x.pts.toFixed(1)}</td><td class="small">${escapeHtml(x.how)}${x.val?` ${fmtMoney(x.val)}`:""}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">No recipe uses this.</p>`;
+}
+// ---------- RENDER: PRICES ----------
+function relevantTier(m){ if(!m.prof||!TIERS[m.prof]) return true; const sk=S.skills[m.prof]; const need=m.skill||1; return need<=sk+40 && need>=sk-110; }
+function renderPrices(){
+  const f=(document.getElementById("priceFilter").value||"").toLowerCase(); const only=document.getElementById("priceOnlyRelevant").checked;
+  const items=[...Object.values(allMats()), ...recipes().filter(r=>!allMats()[r.out.id]).map(r=>({id:r.out.id,n:r.n,src:"crafted ("+PROFS[r.prof].short+")",prof:r.prof,skill:r.sk[0],crafted:true}))];
+  const rows=items.filter(m=>(!f||m.n.toLowerCase().includes(f)) && (!only||relevantTier(m)) && !(m.crafted&&only&&S.skills[m.prof]<m.skill-20)).sort((a,b)=>(a.prof||"zz").localeCompare(b.prof||"zz")||(a.skill||0)-(b.skill||0)||a.n.localeCompare(b.n));
+  document.getElementById("priceCount").textContent=`${rows.length} items`;
+  document.getElementById("priceTable").innerHTML=`<table><thead><tr><th>Item</th><th>Source</th><th class="r">AH price (silver)</th><th class="r">Vendor</th><th class="r">Have</th></tr></thead><tbody>${rows.map(m=>`<tr><td>${escapeHtml(m.n)}</td><td class="small muted">${m.prof?`<span class="prof-${m.prof}">${PROFS[m.prof].short}${m.skill?" "+m.skill:""}</span> · `:""}${escapeHtml(m.src||"")}</td><td class="r"><input type="number" class="price" step="0.01" min="0" id="price-${m.id}" data-id="${m.id}" value="${S.prices[m.id]??""}" placeholder="—"></td><td class="r num muted">${m.buy!=null?`buy ${fmtMoney(m.buy)}`:m.vendor!=null?fmtMoney(m.vendor):"—"}</td><td class="r"><input type="number" step="1" min="0" id="have-${m.id}" data-id="${m.id}" value="${S.have[m.id]??""}" placeholder="0"></td></tr>`).join("")}</tbody></table>`;
+  document.querySelectorAll("#priceTable input.price").forEach(i=>i.addEventListener("change",e=>{ const v=e.target.value; if(v==="") delete S.prices[e.target.dataset.id]; else S.prices[e.target.dataset.id]=parseFloat(v); save(); renderLight(); }));
+  document.querySelectorAll("#priceTable input[id^=have-]").forEach(i=>i.addEventListener("change",e=>{ const v=parseInt(e.target.value); if(!v) delete S.have[e.target.dataset.id]; else S.have[e.target.dataset.id]=v; save(); renderLight(); }));
+}
+// ---------- IMPORT from the addon ----------
+function importSnapshot(txt){ let j; try{ j=JSON.parse(txt); }catch(e){ return {err:"Not valid JSON. Copy the whole box from /fw export."}; }
+  if(!j||!j.chars) return {err:"No characters in this export."};
+  const byName={}; for(const m of Object.values(allMats())) byName[m.n.toLowerCase()]=m.id; for(const r of recipes()) if(!allMats()[r.out.id]) byName[r.n.toLowerCase().replace(/ ×\d+$/,"")]=r.out.id;
+  const classMap={HUNTER:"hunter",WARRIOR:"warrior",PRIEST:"priest"}; const have={}; let nChars=0,nSkills=0,nItems=0,nPrices=0;
+  for(const c of Object.values(j.chars)){ nChars++; const ch=classMap[String(c.class||"").toUpperCase()]; if(ch&&c.level) S.levels[ch]=Math.max(1,Math.min(60,+c.level||1));
+    for(const [pn,sk] of Object.entries(c.skills||{})){ const p=pn.toLowerCase(); if(PROFS[p]){ S.skills[p]=Math.max(1,Math.min(300,+sk||1)); nSkills++; } }
+    for(const src of [c.bags||{},c.bank||{}]) for(const [n,q] of Object.entries(src)){ const id=byName[n.toLowerCase()]; if(id){ have[id]=(have[id]||0)+(+q||0); nItems++; } } }
+  S.have=have;
+  for(const [n,cp] of Object.entries(j.prices||{})){ const id=byName[n.toLowerCase()]; if(id&&+cp>0){ S.prices[id]=Math.round(+cp)/100; nPrices++; } }
+  return {ok:"Imported "+nChars+" characters, "+nSkills+" skills, "+nItems+" stacks, "+nPrices+" prices."}; }
+// ---------- RENDER: GEAR ----------
+const GEAR_NOTES = {
+  hunter:[["Armor","Leather to 39, Mail from 40. Leather must come from a Leatherworker (bring mats + tip). From 40, the Warrior's mail recipes fit."],["Ranged","Bows: vendors, quests, AH. Guns: the Warrior's Engineering, plus scopes and ammo. Train Guns at a weapon master first."],["Melee","Axes, swords, polearms from quests/AH; the Warrior can make axes and maces."],["Enchants","Priest: bracer stamina/agility, Mithril Spurs from the Warrior at BS 215."]],
+  warrior:[["Armor","Mail to 39, Plate from 40. Blacksmithing covers belt, legs, wrist, hands, head, feet, chest at most tiers."],["Weapons","Blacksmithing axes and maces; swords from quests/AH. Shields are not craftable in vanilla, only shield spikes."],["Enchants","Priest: bracer strength, weapon enchants (needs the Priest's rods, which the Warrior makes)."],["Extras","Engineering: bombs, goggles, Target Dummy for soloing."]],
+  priest:[["Armor","Cloth from own Tailoring at every tier."],["Wand","Own Enchanting: Lesser/Greater Magic Wand, Lesser/Greater Mystic Wand."],["Weapon","Daggers/maces/staves from quests/AH. Big Bronze Knife from the Warrior at BS 105."],["Consumables","Own Enchanting oils (Minor Wizard Oil at 45, Minor Mana Oil at 150)."]],
+};
+function renderGear(){
+  const el=document.getElementById("gearBoards"); el.innerHTML="";
+  for(const c of Object.keys(CHARS)){ const lvl=S.levels[c]; const tag=c==="hunter"?(lvl>=40?["hunter40","hunter"]:["hunter"]):[c];
+    const items=recipes().filter(r=>r.wear&&r.wear.some(w=>tag.includes(w))&&["gear","weapon","ranged","wand","bag","scope","ammo","ench","oil"].includes(r.kind)).sort((a,b)=>(a.ilvl||a.sk[0]/5)-(b.ilvl||b.sk[0]/5));
+    const soon=items.filter(r=>!r.ilvl||Math.abs((r.ilvl||0)-lvl)<=12);
+    let html=`<div class="card"><h2>${CHARS[c].name} <span class="num muted">lvl ${lvl}</span></h2><dl class="wear">${CHARS[c].armor.map(a=>`<dt>${a[0]}</dt><dd>${a[1]}</dd>`).join("")}</dl><hr style="border:0;border-top:1px solid var(--line);margin:.6rem 0">${GEAR_NOTES[c].map(n=>`<p class="small"><b>${n[0]}.</b> ${n[1]}</p>`).join("")}<h3 style="margin-top:.75rem">Team can craft for this character</h3><div class="tablewrap"><table><thead><tr><th>Item</th><th>Slot</th><th class="r">ilvl</th><th></th></tr></thead><tbody>`;
+    html+=(soon.length?soon:items.slice(0,8)).map(r=>`<tr><td><b>${escapeHtml(r.n)}</b><div class="small muted">${profSpan(r.prof)} ${r.sk[0]}</div></td><td class="small">${escapeHtml(r.slot||r.kind)}</td><td class="r num">${r.ilvl||"—"}</td><td>${chip(diff(r))}</td></tr>`).join("");
+    html+=`</tbody></table></div>${soon.length<items.length?`<details style="margin-top:.5rem"><summary class="small">All ${items.length} craftable items</summary><div class="tablewrap"><table><tbody>${items.map(r=>`<tr><td>${escapeHtml(r.n)}</td><td class="small muted">${escapeHtml(r.slot||r.kind)}</td><td class="r num">${r.ilvl||"—"}</td><td>${chip(diff(r))}</td></tr>`).join("")}</tbody></table></div></details>`:""}</div>`;
+    el.insertAdjacentHTML("beforeend",html); }
+}
+// ---------- RENDER: RECIPES (editor) ----------
+function renderRecipes(){
+  const sel=document.getElementById("recipeProf"); if(!sel.options.length){ sel.innerHTML=`<option value="">All professions</option>`+Object.keys(PROFS).map(p=>`<option value="${p}">${PROFS[p].name}</option>`).join(""); }
+  const p=sel.value, f=(document.getElementById("recipeFilter").value||"").toLowerCase();
+  const rows=recipes().filter(r=>(!p||r.prof===p)&&(!f||r.n.toLowerCase().includes(f))).sort((a,b)=>a.prof.localeCompare(b.prof)||a.sk[0]-b.sk[0]);
+  document.getElementById("recipeTable").innerHTML=`<table><thead><tr><th>Recipe</th><th>Prof</th><th class="r">O / Y / G / Grey</th><th>Reagents</th><th>Makes</th><th class="r">ilvl</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${escapeHtml(r.n)}</b>${OVERRIDES[r.id]?` <span class="chip" style="color:var(--accent)">edited</span>`:""}</td><td>${profSpan(r.prof)}</td><td class="r num">${r.sk.join(" / ")}</td><td class="reagents">${reagentList(r)}</td><td class="small">${r.out.q}× ${escapeHtml(matName(r.out.id))}${r.slot?`<div class="muted">${escapeHtml(r.slot)}</div>`:""}</td><td class="r num">${r.ilvl||""}</td><td><button class="ghost small" data-edit="${r.id}">edit</button></td></tr>`).join("")}</tbody></table>`;
+  document.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>openEditor(recipes().find(r=>r.id===b.dataset.edit))));
+}
+function openEditor(r){
+  const ed=document.getElementById("recipeEditor"); ed.hidden=false; const isNew=!r; r = r || {id:"",prof:"blacksmithing",n:"",sk:[1,0,0,0],re:{},out:{id:"",q:1},kind:"gear",ilvl:"",slot:"",wear:[]};
+  const reText=Object.entries(r.re).map(([id,q])=>`${matName(id)} x${q}`).join(", ");
+  ed.innerHTML=`<h2>${isNew?"New recipe":"Edit: "+escapeHtml(r.n)}</h2><p class="small muted">Reagents: one per comma, "Name xN". Names must match a material (see Prices tab); unknown names are created as new materials.</p><div class="editor">
+    <label>Name<input type="text" id="ed-n" value="${escapeHtml(r.n)}"></label>
+    <label>Profession<select id="ed-prof">${Object.keys(PROFS).map(p=>`<option value="${p}" ${p===r.prof?"selected":""}>${PROFS[p].name}</option>`).join("")}</select></label>
+    <label>Orange (learn)<input type="number" id="ed-s0" value="${r.sk[0]}"></label><label>Yellow<input type="number" id="ed-s1" value="${r.sk[1]||""}"></label><label>Green<input type="number" id="ed-s2" value="${r.sk[2]||""}"></label><label>Grey<input type="number" id="ed-s3" value="${r.sk[3]||""}"></label>
+    <label>Kind<select id="ed-kind">${["gear","weapon","ranged","wand","part","bar","rod","ench","oil","bag","scope","ammo","consumable"].map(k=>`<option ${k===r.kind?"selected":""}>${k}</option>`).join("")}</select></label>
+    <label>Item level<input type="number" id="ed-ilvl" value="${r.ilvl||""}"></label><label>Slot / note<input type="text" id="ed-slot" value="${escapeHtml(r.slot||"")}"></label>
+    <label>Output qty<input type="number" id="ed-oq" value="${r.out.q}"></label>
+    <label>Output is material<input type="text" id="ed-oid" value="${allMats()[r.out.id]?escapeHtml(matName(r.out.id)):""}" placeholder="blank = the item itself" list="matlist"></label>
+    <label>Who uses it<input type="text" id="ed-wear" value="${(r.wear||[]).join(",")}" placeholder="hunter,warrior,priest,hunter40"></label>
+    <label class="wide">Reagents<textarea id="ed-re">${escapeHtml(reText)}</textarea></label>
+    <div class="wide" style="display:flex;gap:.5rem;flex-wrap:wrap"><button class="primary" id="ed-save">Save</button><button id="ed-cancel">Cancel</button>${!isNew?`<button id="ed-del" class="ghost bad">Remove recipe</button>`:""}${OVERRIDES[r.id]&&R.find(x=>x.id===r.id)?`<button id="ed-reset" class="ghost">Reset to built-in</button>`:""}</div></div>
+    <datalist id="matlist">${Object.values(allMats()).map(m=>`<option value="${escapeHtml(m.n)}">`).join("")}</datalist>`;
+  const findMat=name=>{ name=name.trim(); const hit=Object.values(allMats()).find(m=>m.n.toLowerCase()===name.toLowerCase()); if(hit) return hit.id; const id=name.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""); if(!id) return null; CUSTOM_MATS[id]={id,n:name,src:"custom"}; saveMat(CUSTOM_MATS[id]); return id; };
+  document.getElementById("ed-cancel").onclick=()=>ed.hidden=true;
+  document.getElementById("ed-save").onclick=()=>{ const n=document.getElementById("ed-n").value.trim(); if(!n) return toast("Name is required");
+    const re={}; for(const part of document.getElementById("ed-re").value.split(",")){ const m=part.trim().match(/^(.*?)\s*[x×]\s*(\d+)$/i); if(!m) continue; const id=findMat(m[1]); if(id) re[id]=parseInt(m[2]); }
+    const s0=parseInt(document.getElementById("ed-s0").value)||1; const sk=[s0, parseInt(document.getElementById("ed-s1").value)||s0+20, parseInt(document.getElementById("ed-s2").value)||s0+30, parseInt(document.getElementById("ed-s3").value)||s0+40];
+    const id = r.id || n.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""); const oidName=document.getElementById("ed-oid").value.trim(); const oid = oidName? findMat(oidName) : id;
+    const nr={id,prof:document.getElementById("ed-prof").value,n,sk,re,out:{id:oid,q:parseInt(document.getElementById("ed-oq").value)||1},kind:document.getElementById("ed-kind").value,ilvl:parseInt(document.getElementById("ed-ilvl").value)||undefined,slot:document.getElementById("ed-slot").value.trim()||undefined,wear:document.getElementById("ed-wear").value.split(",").map(s=>s.trim()).filter(Boolean)};
+    OVERRIDES[id]=nr; saveRecipe(id,nr); ed.hidden=true; toast("Saved"); renderAll(); };
+  const del=document.getElementById("ed-del"); if(del) del.onclick=()=>{ OVERRIDES[r.id]={id:r.id,deleted:true}; saveRecipe(r.id,{id:r.id,deleted:true}); ed.hidden=true; toast("Removed"); renderAll(); };
+  const rs=document.getElementById("ed-reset"); if(rs) rs.onclick=()=>{ delete OVERRIDES[r.id]; deleteRecipe(r.id); ed.hidden=true; toast("Reset"); renderAll(); };
+  ed.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function openMatEditor(){ const ed=document.getElementById("recipeEditor"); ed.hidden=false; ed.innerHTML=`<h2>New material</h2><div class="editor"><label>Name<input type="text" id="md-n"></label><label>Source<input type="text" id="md-src" placeholder="drop / vendor / node / AH"></label><label>Produced by<select id="md-prof"><option value="">nobody on the team</option>${Object.keys(PROFS).map(p=>`<option value="${p}">${PROFS[p].name}</option>`).join("")}</select></label><label>Skill to get it<input type="number" id="md-skill"></label><label>Vendor sells for (copper)<input type="number" id="md-vendor"></label><label>Vendor buy price (copper)<input type="number" id="md-buy"></label><div class="wide" style="display:flex;gap:.5rem"><button class="primary" id="md-save">Save</button><button id="md-cancel">Cancel</button></div></div>`;
+  document.getElementById("md-cancel").onclick=()=>ed.hidden=true;
+  document.getElementById("md-save").onclick=()=>{ const n=document.getElementById("md-n").value.trim(); if(!n) return toast("Name is required"); const id=n.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""); const m={id,n,src:document.getElementById("md-src").value.trim()||"custom"}; const p=document.getElementById("md-prof").value; if(p) m.prof=p; const sk=parseInt(document.getElementById("md-skill").value); if(sk) m.skill=sk; const v=parseInt(document.getElementById("md-vendor").value); if(v) m.vendor=v; const b=parseInt(document.getElementById("md-buy").value); if(b) m.buy=b; CUSTOM_MATS[id]=m; saveMat(m); ed.hidden=true; toast("Saved"); renderAll(); };
+}
+// ---------- RENDER: ADDONS ----------
+const ADDONS=[
+  ["Auctionator","You have it. Use its Shopping Lists: make one list per crafting tier (e.g. “BS 125–175: Iron Bar, Heavy Stone, Coal”) and the AH tab shows every price in one click. Its tooltip price is what goes in this page's Prices tab."],
+  ["Altoholic","The single biggest help for a three-character setup: see every alt's bags, bank, mail and profession recipes from any character. Tooltips show “Hunter has 43 Copper Ore in bank”. Pair with DataStore."],
+  ["TradeSkillMaster (TSM)","Heavier than Auctionator but it answers “what is this craft worth” inside the profession window, including disenchant value. Its Crafting module builds a shopping list from a queue. Worth it later if money becomes a real goal."],
+  ["Skillet (or Advanced Trade Skill Window)","Replaces the profession window: queue 10 crafts, see reagents you're short across alts, and it reads Altoholic's inventory. Good for “make 5 Rough Bronze Leggings then mail to the Priest”."],
+  ["GatherMate2 + GatherMate2_Data","Marks mining nodes on the map and minimap, with pre-filled data. Classic ore spawns in fixed spots, so the Hunter's loops become efficient quickly."],
+  ["Postal","One-click “open all mail” and remembers recipient names. You will mail ore, bars, greens and dust between three characters constantly."],
+  ["Bagnon or AdiBags","Shows alts' bags from any character, and groups items by type (Trade Goods, Enchanting) so the Priest sees dust totals at a glance."],
+  ["Enchantrix (part of Auctioneer)","Shows disenchant results and odds in item tooltips, so the Priest can judge whether to DE a green or vendor it."],
+  ["Compatibility note","WoW Forever launched on 4 Nov 2026; check each addon's page for an interface version matching Forever before installing. Classic-Era builds are the likely match."],
+];
+function renderAddons(){ document.getElementById("addons").innerHTML=ADDONS.map(a=>`<div class="card"><h2 style="font-size:1rem">${escapeHtml(a[0])}</h2><p class="small">${escapeHtml(a[1])}</p></div>`).join(""); }
+// ---------- ROUTING / BOOT ----------
+const VIEWS=["map","plan","ladder","mats","prices","gear","recipes","addons"];
+function route(){ let h=(location.hash||"#map").slice(1); if(!VIEWS.includes(h)) h="map"; document.querySelectorAll("section.view").forEach(s=>s.classList.toggle("active",s.id==="view-"+h)); document.querySelectorAll("#nav a").forEach(a=>a.classList.toggle("active",a.getAttribute("href")==="#"+h)); }
+window.addEventListener("hashchange",route);
+let toastT; function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),1800); }
+function renderLight(){ costMemo.clear(); renderFlow(); renderMapAlerts(); renderPlan(); renderMat(); renderGear(); renderLadder(); }
+function renderAll(){ costMemo.clear(); renderSkillInputs(); renderFlow(); renderMapAlerts(); renderPlan(); renderLadder(); renderMatPick(); renderMat(); renderPrices(); renderGear(); renderRecipes(); }
+document.getElementById("matPick").addEventListener("change",renderMat); document.getElementById("matQty").addEventListener("input",renderMat);
+document.getElementById("priceFilter").addEventListener("input",renderPrices); document.getElementById("priceOnlyRelevant").addEventListener("change",renderPrices);
+document.getElementById("recipeProf").addEventListener("change",renderRecipes); document.getElementById("recipeFilter").addEventListener("input",renderRecipes);
+document.getElementById("importBtn").addEventListener("click",()=>{ const r=importSnapshot(document.getElementById("importText").value); const st=document.getElementById("importStatus"); st.textContent=r.err||r.ok; st.className="small "+(r.err?"bad":"good"); if(r.ok){ save(); renderAll(); } });
+document.getElementById("recipeNew").addEventListener("click",()=>openEditor(null)); document.getElementById("matNew").addEventListener("click",openMatEditor);
+// ---------- PERSISTENCE: db capability with localStorage fallback ----------
+let DB=null, saveT=null; const LS="forever-workshop-v1";
+function setSync(t,cls){ const e=document.getElementById("syncState"); e.textContent=t; e.className="sync "+(cls||""); }
+function lsLoad(){ try{ const j=JSON.parse(localStorage.getItem(LS)||"null"); if(j){ if(j.S) S=Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)),j.S); OVERRIDES=j.OVERRIDES||{}; CUSTOM_MATS=j.CUSTOM_MATS||{}; } }catch(e){} }
+function lsSave(){ try{ localStorage.setItem(LS,JSON.stringify({S,OVERRIDES,CUSTOM_MATS})); }catch(e){} }
+function save(){ lsSave(); if(!DB) return; clearTimeout(saveT); saveT=setTimeout(async()=>{ try{ await DB.doc("state/main").set(JSON.parse(JSON.stringify(S))); setSync("saved","good"); }catch(e){ setSync("save failed: "+(e.code||e.message),"bad"); } },400); }
+async function saveRecipe(id,r){ lsSave(); if(!DB) return; try{ await DB.doc("recipes/"+id).set(JSON.parse(JSON.stringify(r))); }catch(e){ setSync("save failed","bad"); } }
+async function deleteRecipe(id){ lsSave(); if(!DB) return; try{ await DB.doc("recipes/"+id).delete(); }catch(e){} }
+async function saveMat(m){ lsSave(); if(!DB) return; try{ await DB.doc("mats/"+m.id).set(JSON.parse(JSON.stringify(m))); }catch(e){} }
+function start(){ lsLoad(); route(); renderAll(); setSync("local only","muted");
+  const timer=setTimeout(()=>{ if(!DB) setSync("local only (no account store)","muted"); },10000);
+  (async()=>{ const db = window.claude?.use ? await window.claude.use("db") : null; if(!db){ clearTimeout(timer); return; } DB=db; let first=true;
+    db.doc("state/main").onSnapshot(snap=>{ clearTimeout(timer); if(snap.exists){ const d=snap.data(); S=Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)),d); lsSave(); } else if(first){ db.doc("state/main").set(JSON.parse(JSON.stringify(S))).catch(()=>{}); } first=false; setSync("synced","good"); renderAll(); }, e=>{ clearTimeout(timer); setSync("read-only ("+(e.code||"error")+")","muted"); });
+    db.collection("recipes").onSnapshot(qs=>{ OVERRIDES={}; qs.docs.forEach(d=>{ OVERRIDES[d.id]=d.data(); }); lsSave(); renderAll(); }, ()=>{});
+    db.collection("mats").onSnapshot(qs=>{ CUSTOM_MATS={}; qs.docs.forEach(d=>{ CUSTOM_MATS[d.id]=d.data(); }); lsSave(); renderAll(); }, ()=>{});
+  })(); }
+start();
+</script>
